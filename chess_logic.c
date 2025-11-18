@@ -134,12 +134,47 @@ int does_rook_see_king(board_t b, int from_i, int from_j, char direction){
                 step_j = from_j + i; 
                 break;
             case 'u':
-                step_i = from_i - 1;
+                step_i = from_i - i;
                 step_j = from_j; 
                 break;
             case 'd':
-                step_i = from_i + 1;
+                step_i = from_i + i;
                 step_j = from_j; 
+                break;
+            default:
+                break;
+        }
+        if( is_in_bounds(step_i, step_j) ){
+            if(b.board[from_i][from_j].color != b.board[step_i][step_j].color && b.board[step_i][step_j].type == 'k'){
+                return 1;
+            }
+            if(b.board[step_i][step_j].type != '.'){
+                return 0;
+            }
+        }
+    }
+    return 0;
+}
+
+int does_bishop_see_king(board_t b, int from_i, int from_j, char direction){
+    for(int i = 1; i < BOARD_SIZE; i++){
+        int step_i, step_j;
+        switch(direction){
+            case 'u':
+                step_i = from_i - i;
+                step_j = from_j - i; 
+                break;
+            case 'U':
+                step_i = from_i - i;
+                step_j = from_j + i; 
+                break;
+            case 'l':
+                step_i = from_i + i;
+                step_j = from_j - i; 
+                break;
+            case 'L':
+                step_i = from_i + i;
+                step_j = from_j + i; 
                 break;
             default:
                 break;
@@ -236,123 +271,49 @@ int check_for_check(board_t b, int player_to_be_checked, player_t white, player_
                     }
                 }
                 else if( b.board[i][j].type == 'b' ){
-                    for(int k = 1; k < BOARD_SIZE; k++){
-                        if( is_in_bounds(i-k, j-k) ){
-                            if(b.board[i-k][j-k].color != player_color && b.board[i-k][j-k].type == 'k'){
-                                return 1;
-                            }
-                            if(b.board[i-k][j-k].type != '.'){
-                                break;
-                            }
-                        }
+
+                    if( does_bishop_see_king(b, i, j, 'u') ){
+                        return 1;
                     }
-                    for(int k = 1; k < BOARD_SIZE; k++){
-                        if( is_in_bounds(i-k, j+k) ){
-                            if(b.board[i-k][j+k].color != player_color && b.board[i-k][j+k].type == 'k'){
-                                return 1;
-                            }
-                            if(b.board[i-k][j+k].type != '.'){
-                                break;
-                            }
-                        }
+                    if( does_bishop_see_king(b, i, j, 'U') ){
+                        return 1;
                     }
-                    for(int k = 1; k < BOARD_SIZE; k++){
-                        if( is_in_bounds(i+k, j-k) ){
-                            if(b.board[i+k][j-k].color != player_color && b.board[i+k][j-k].type == 'k'){
-                                return 1;
-                            }
-                            if(b.board[i+k][j-k].type != '.'){
-                                break;
-                            }
-                        }
+                    if( does_bishop_see_king(b, i, j, 'l') ){
+                        return 1;
                     }
-                    for(int k = 1; k < BOARD_SIZE; k++){
-                        if( is_in_bounds(i+k, j+k) ){
-                            if(b.board[i+k][j+k].color != player_color && b.board[i+k][j+k].type == 'k'){
-                                return 1;
-                            }
-                            if(b.board[i+k][j+k].type != '.'){
-                                break;
-                            }
-                        }
+                    if( does_bishop_see_king(b, i, j, 'L') ){
+                        return 1;
                     }
                 }
                 else if( b.board[i][j].type == 'q' ){
-                    for(int k = i - 1; k >= 0; k--){
-                        if(b.board[k][j].color != player_color && b.board[k][j].type == 'k'){
-                            return 1;
-                        }
-                        if(b.board[k][j].type != '.'){
-                            break;
-                        }
+
+                    if( does_bishop_see_king(b, i, j, 'u') ){
+                        return 1;
+                    }
+                    if( does_bishop_see_king(b, i, j, 'U') ){
+                        return 1;
+                    }
+                    if( does_bishop_see_king(b, i, j, 'l') ){
+                        return 1;
+                    }
+                    if( does_bishop_see_king(b, i, j, 'L') ){
+                        return 1;
+                    }
+                    // upwards check
+                    if( does_rook_see_king(b, i, j, 'u') ){
+                        return 1;
                     }
                     // downwards check
-                    for(int k = i + 1; k < BOARD_SIZE; k++){
-                        if(b.board[k][j].color != player_color && b.board[k][j].type == 'k'){
-                            return 1;
-                        }
-                        if(b.board[k][j].type != '.'){
-                            break;
-                        }
+                    if( does_rook_see_king(b, i, j, 'd') ){
+                        return 1;
                     }
                     // left check
-                    for(int k = j - 1; k >= 0; k--){
-                        if(b.board[i][k].color != player_color && b.board[i][k].type == 'k'){
-                            return 1;
-                        }
-                        if(b.board[i][k].type != '.'){
-                            break;
-                        }
+                    if( does_rook_see_king(b, i, j, 'l') ){
+                        return 1;
                     }
                     // right check
-                    for(int k = j + 1; k < BOARD_SIZE; k++){
-                        if(b.board[i][k].color != player_color && b.board[i][k].type == 'k'){
-                            return 1;
-                        }
-                        if(b.board[i][k].type != '.'){
-                            break;
-                        }
-                    }
-
-                    for(int k = 1; k < BOARD_SIZE; k++){
-                        if( is_in_bounds(i-k, j-k) ){
-                            if(b.board[i-k][j-k].color != player_color && b.board[i-k][j-k].type == 'k'){
-                                return 1;
-                            }
-                            if(b.board[i-k][j-k].type != '.'){
-                                break;
-                            }
-                        }
-                    }
-                    for(int k = 1; k < BOARD_SIZE; k++){
-                        if( is_in_bounds(i-k, j+k) ){
-                            if(b.board[i-k][j+k].color != player_color && b.board[i-k][j+k].type == 'k'){
-                                return 1;
-                            }
-                            if(b.board[i-k][j+k].type != '.'){
-                                break;
-                            }
-                        }
-                    }
-                    for(int k = 1; k < BOARD_SIZE; k++){
-                        if( is_in_bounds(i+k, j-k) ){
-                            if(b.board[i+k][j-k].color != player_color && b.board[i+k][j-k].type == 'k'){
-                                return 1;
-                            }
-                            if(b.board[i+k][j-k].type != '.'){
-                                break;
-                            }
-                        }
-                    }
-                    for(int k = 1; k < BOARD_SIZE; k++){
-                        if( is_in_bounds(i+k, j+k) ){
-                            if(b.board[i+k][j+k].color != player_color && b.board[i+k][j+k].type == 'k'){
-                                return 1;
-                            }
-                            if(b.board[i+k][j+k].type != '.'){
-                                break;
-                            }
-                        }
+                    if( does_rook_see_king(b, i, j, 'r') ){
+                        return 1;
                     }
                 }
             }
