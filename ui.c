@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <ncurses.h>
-
+#include <wchar.h>
+#include <locale.h>
 
 #define SQUARE_HEIGHT 3
 #define SQUARE_WIDTH 6
@@ -10,30 +11,171 @@
 #define TABLE_WIDTH (SQUARE_WIDTH*8)
 #define HEIGHT 40
 #define WIDTH 80
+
+
 #define COLOR_BROWN 8
 #define COLOR_BEJ 9
+#define COLOR_GREY 10
 
+
+#define BOARD_SIZE 8
+#define BLUE "\x1b[34m"
+#define RESET "\x1b[0m"
+#define BLK_OFFSET 6
+
+typedef struct {
+    int color;
+    char type;
+    int row;
+    int col;
+} piece_t;
+
+typedef enum
+{
+    COLOR_PAIR_BLACK_LIGHT = 1,
+    COLOR_PAIR_BLACK_DARK,
+    COLOR_PAIR_WHITE_LIGHT,
+    COLOR_PAIR_WHITE_DARK,
+    COLOR_PAIR_LIGHT,
+    COLOR_PAIR_DARK,
+    COLOR_PAIR_LABELS,
+    COLOR_PAIR_HIGHLIGHT,
+    COLOR_PAIR_HIGHLIGHT_BLACK,
+    COLOR_PAIR_HIGHLIGHT_WHITE
+} colorpairs_t;
+
+typedef struct {
+    piece_t board[BOARD_SIZE][BOARD_SIZE];
+}board_t;
+piece_t get_piece(int color, char type, int row, int col){
+    piece_t p;
+    p.color = color; // 0 = white, 1 = black, -1 = empty
+    p.type  = type; // . = empty
+    p.row   = row;
+    p.col   = col;
+    return p;
+}
+
+board_t init_board(board_t b){
+    for(int i = 2; i < 6; i++){
+        for(int j = 0; j < BOARD_SIZE; j++){
+            b.board[i][j] = get_piece(-1, '.', i, j);
+        }
+    }
+    for(int i = 0; i < BOARD_SIZE; i++){
+        b.board[1][i] = get_piece(1, 'p', 1, i);
+        b.board[6][i] = get_piece(0, 'p', 6, i);
+    }
+    char pieces[8] = {'r', 'n', 'b', 'q', 'k', 'b', 'n', 'r'};
+    for(int i = 0; i < BOARD_SIZE; i++){
+        b.board[0][i] = get_piece(1, pieces[i], 0, i);
+        b.board[7][i] = get_piece(0,pieces[i],7,i);
+    }
+    return b;
+}
+
+void print_board(board_t b){
+    for(int i = 0; i < BOARD_SIZE; i++){
+        printf("--");
+    }
+    printf("-\n");
+
+    //
+    printf("  ");
+    for(int i = 0; i < BOARD_SIZE; i++){
+        printf("%d ", i);
+    }
+    printf("\n");
+
+    for(int i = 0; i < BOARD_SIZE + 1; i++){
+        for(int j = 0; j < BOARD_SIZE; j++){
+
+            if(i == BOARD_SIZE){
+                if(j == 0){
+                    printf("  ");
+                    continue;
+                }
+                else{
+                    printf("%c ", 'a' + j - 1);
+                    if(j == BOARD_SIZE-1){
+                        printf("%c ", 'a' + j);
+                    }
+                }
+                continue;
+            }
+
+            if(j == 0){
+                printf("%d ", BOARD_SIZE - i);
+
+            }
+            if(b.board[i][j].color == 1){
+                printf(BLUE "%c " RESET, b.board[i][j].type);
+            }
+            else{
+                printf("%c ", b.board[i][j].type);
+            }
+        }
+        printf(" %d\n", i);
+    }
+    for(int i = 0; i < BOARD_SIZE; i++){
+        printf("--");
+    }
+    printf("-\n");
+}
+
+const wchar_t* map_to_unicode(char piece, int color) {
+    static wchar_t buf[2];     // [character, null terminator]
+    int offset = color ? BLK_OFFSET : 0;
+    wchar_t ch = L'?';         // fallback
+
+    switch (piece) {
+        case 'p': ch = 0x2659 + offset; break;
+        case 'k': ch = 0x2654 + offset; break;
+        case 'n': ch = 0x2658 + offset; break;
+        case 'b': ch = 0x2657 + offset; break;
+        case 'q': ch = 0x2655 + offset; break;
+        case 'r': ch = 0x2656 + offset; break;
+    }
+
+    buf[0] = ch;
+    buf[1] = L'\0';
+    return buf;
+}
 
 void init_colors() {
     init_color(COLOR_BROWN,585,300,132);
     init_color(COLOR_BEJ,929,859,589);
+	init_color(COLOR_GREY, 500, 500, 500);
 }
 
-void draw_square(WINDOW* win,int row,int col) {
+void draw_square(WINDOW* win,int row,int col,board_t board,int color_pair) {
     int win_width, win_height;
     getmaxyx(win, win_height, win_width);
     int board_start_x = (win_width - TABLE_WIDTH) / 2;
     int board_start_y = (win_height - TABLE_HEIGHT) / 2;
     int y = board_start_y + row * SQUARE_HEIGHT;
     int x = board_start_x + col * SQUARE_WIDTH;
-    wattron(win, COLOR_PAIR(1) | COLOR_PAIR(2));
+    wattron(win, COLOR_PAIR(color_pair));
     for (int i = 0; i < SQUARE_HEIGHT; i++) {
         mvwhline(win, y + i, x, ' ', SQUARE_WIDTH);
     }
-    wattroff(win, COLOR_PAIR(1) | COLOR_PAIR(2));
+    wattroff(win, COLOR_PAIR(color_pair));
+	if(board.board[row][col].color !=-1){
+        switch(board.board[row][col].color){
+            case 0:
+                wattron(win,COLOR_PAIR(COLOR_PAIR_HIGHLIGHT_WHITE)|A_BOLD);
+                break;
+            case 1:
+                wattron(win,COLOR_PAIR(COLOR_PAIR_HIGHLIGHT_BLACK)|A_BOLD);
+                break;
+        }
+        mvwaddch(win, y+LABEL_OFFSET_Y,x+LABEL_OFFSET_X,board.board[row][col].type);
+        wattroff(win, COLOR_PAIR(COLOR_PAIR_HIGHLIGHT_WHITE)|COLOR_PAIR(COLOR_PAIR_HIGHLIGHT_BLACK)| A_BOLD);
+    }
+    wrefresh(win);
 }
 
-void my_take(WINDOW* win) {
+void render_board(WINDOW* win,board_t board) {
     int win_width, win_height;
     getmaxyx(win, win_height, win_width);
     int board_start_x = (win_width - TABLE_WIDTH) / 2;
@@ -45,42 +187,41 @@ void my_take(WINDOW* win) {
 
             // Set color for square
             if ((row + col) % 2 == 0) {
-                wattron(win, COLOR_PAIR(5));  // Light
+                wattron(win, COLOR_PAIR(COLOR_PAIR_LIGHT));  // Light
             } else {
-                wattron(win, COLOR_PAIR(6));  // Dark
+                wattron(win, COLOR_PAIR(COLOR_PAIR_DARK));  // Dark
             }
 
             // Draw square
             for (int i = 0; i < SQUARE_HEIGHT; i++) {
                 mvwhline(win, y + i, x, ' ', SQUARE_WIDTH);
             }
+			wattroff(win, COLOR_PAIR(COLOR_PAIR_LIGHT)| COLOR_PAIR(COLOR_PAIR_DARK));
 
-            if (row==0 || row ==1) {
-                if ((row + col) % 2 == 0) {
-                    wattron(win, COLOR_PAIR(1)|A_BOLD);  // Light
-                } else {
-                    wattron(win, COLOR_PAIR(2)|A_BOLD);  // Dark
+			if(board.board[row][col].color !=-1){
+				switch(board.board[row][col].color){
+                    case 0:
+                        if ((row + col) % 2 == 0) {
+                            wattron(win, COLOR_PAIR(COLOR_PAIR_WHITE_LIGHT)|A_BOLD);  // Light
+                        } else {
+                            wattron(win, COLOR_PAIR(COLOR_PAIR_WHITE_DARK)|A_BOLD);  // Dark
+                        }
+                        break;
+                    case 1:
+                        if ((row + col) % 2 == 0) {
+                            wattron(win, COLOR_PAIR(COLOR_PAIR_BLACK_LIGHT)|A_BOLD);  // Light
+                        } else {
+                            wattron(win, COLOR_PAIR(COLOR_PAIR_BLACK_DARK)|A_BOLD);  // Dark
+                        }
+                        break;
                 }
-                mvwaddch(win, y+LABEL_OFFSET_Y,x+LABEL_OFFSET_X,'P');
-                wattroff(win, COLOR_PAIR(1) | COLOR_PAIR(2) | A_BOLD);
+				mvwaddch(win, y+LABEL_OFFSET_Y,x+LABEL_OFFSET_X,board.board[row][col].type);
+                wattroff(win, COLOR_PAIR(COLOR_PAIR_BLACK_LIGHT) | COLOR_PAIR(COLOR_PAIR_BLACK_DARK) | COLOR_PAIR(COLOR_PAIR_WHITE_LIGHT)|COLOR_PAIR(COLOR_PAIR_WHITE_DARK)| A_BOLD);
+			}
 
-
-            }
-
-            if (row ==6 || row ==7) {
-                if ((row + col) % 2 == 0) {
-                    wattron(win, COLOR_PAIR(3)|A_BOLD);  // Light
-                } else {
-                    wattron(win, COLOR_PAIR(4)|A_BOLD);  // Dark
-                }
-                mvwaddch(win, y+LABEL_OFFSET_Y,x+LABEL_OFFSET_X,'P');
-                wattroff(win, COLOR_PAIR(3) | COLOR_PAIR(4) | A_BOLD);
-
-            }
 
             // // Draw coordinates
-            wattroff(win, COLOR_PAIR(5) | COLOR_PAIR(6));
-            wattron(win, COLOR_PAIR(7));
+            wattron(win, COLOR_PAIR(COLOR_PAIR_LABELS));
 
             if (row == 7) {
                 mvwprintw(win, y + SQUARE_HEIGHT+LABEL_OFFSET_Y, x + LABEL_OFFSET_X, "%c", 'a' + col);
@@ -89,7 +230,7 @@ void my_take(WINDOW* win) {
 
                 mvwprintw(win, y + LABEL_OFFSET_Y, x - LABEL_OFFSET_X, "%d", 8 - row);
             }
-            wattroff(win, COLOR_PAIR(7));
+            wattroff(win, COLOR_PAIR(COLOR_PAIR_LABELS));
         }
     }
     wrefresh(win);
@@ -97,7 +238,7 @@ void my_take(WINDOW* win) {
 
 }
 
-void mouse_click(int ch,WINDOW* win) {
+void mouse_click(int ch,WINDOW* win,board_t board) {
     mousemask(BUTTON1_PRESSED|BUTTON2_PRESSED, NULL);
     MEVENT event;
 
@@ -123,7 +264,9 @@ void mouse_click(int ch,WINDOW* win) {
                         int index_matrix_y=(event.y-board_start_y)/SQUARE_HEIGHT;
                         move(3,0);
                         printw("%d %d",index_matrix_x,index_matrix_y);
-                        draw_square(win,index_matrix_y,index_matrix_x);
+						if(board.board[index_matrix_y][index_matrix_x].color !=-1){
+                        	draw_square(win,index_matrix_y,index_matrix_x,board,COLOR_PAIR_HIGHLIGHT);
+                        }
 
 
                     }
@@ -146,6 +289,10 @@ void mouse_click(int ch,WINDOW* win) {
 int main(void) {
     int ch;
 
+    board_t board ;
+    board=init_board(board);
+	board.board[3][1]=(piece_t){0,'k',1,3}; //check for piece placement
+    setlocale(LC_CTYPE, "");
     initscr();
     cbreak();
     keypad(stdscr, TRUE);
@@ -158,13 +305,25 @@ int main(void) {
     start_color();
     init_colors();
     if (can_change_color()) {
-        init_pair(1, COLOR_BLACK, COLOR_BEJ);    // Black pieces on light
-        init_pair(2,COLOR_BLACK,COLOR_BROWN); //black piece on black
-        init_pair(3, COLOR_WHITE, COLOR_BEJ);  // white pieces on light
-        init_pair(4, COLOR_WHITE, COLOR_BROWN); //white pieces on LIGHT
-        init_pair(5, COLOR_BLACK, COLOR_BEJ);    // Light squares
-        init_pair(6, COLOR_WHITE, COLOR_BROWN);  // Dark squares
-        init_pair(7, COLOR_WHITE, COLOR_BLACK); //labels
+		//black pieces
+       	init_pair(COLOR_PAIR_BLACK_LIGHT, COLOR_GREY, COLOR_BEJ);
+		init_pair(COLOR_PAIR_BLACK_DARK, COLOR_GREY, COLOR_BROWN);
+
+		//white pieces
+		init_pair(COLOR_PAIR_WHITE_LIGHT, COLOR_WHITE, COLOR_BEJ);
+		init_pair(COLOR_PAIR_WHITE_DARK,  COLOR_WHITE, COLOR_BROWN);
+
+        //board colors
+		init_pair(COLOR_PAIR_LIGHT, COLOR_BLACK, COLOR_BEJ);
+		init_pair(COLOR_PAIR_DARK,  COLOR_WHITE, COLOR_BROWN);
+
+		//labels
+		init_pair(COLOR_PAIR_LABELS, COLOR_WHITE, COLOR_BLACK);
+
+		//highlighted square
+		init_pair(COLOR_PAIR_HIGHLIGHT,        COLOR_BROWN, COLOR_GREEN);
+		init_pair(COLOR_PAIR_HIGHLIGHT_BLACK,  COLOR_GREY,  COLOR_GREEN);
+		init_pair(COLOR_PAIR_HIGHLIGHT_WHITE,  COLOR_WHITE, COLOR_GREEN);
     }
 
     printw("Press ESC to exit");
@@ -177,11 +336,11 @@ int main(void) {
     box(square, 0, 0);
     wrefresh(square);
     set_escdelay(0);
-    my_take(square);
+    render_board(square,board);
     while(( ch = getch()) != 27)
     {
 
-        mouse_click(ch,square);
+        mouse_click(ch,square,board);
     }
     endwin();
     return 0;
