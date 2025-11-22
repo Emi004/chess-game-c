@@ -1,6 +1,5 @@
 chess
-c
-s
 cmake-build-debug
 CMakeLists.txt
 .idea
+*.exe
