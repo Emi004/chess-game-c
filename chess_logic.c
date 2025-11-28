@@ -97,6 +97,13 @@ int char_to_index(char c) {
     return -1;  
 }
 
+char index_to_file(int index) {
+    if (index >= 0 && index <= 7) {
+        return 'a' + index;
+    }
+    return '?';
+}
+
 int is_in_bounds(int i, int j){
     return ( i >= 0 && i < 8 && j >= 0 && j < 8);
 }
