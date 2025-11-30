@@ -49,7 +49,8 @@ void print_piece(piece_t p);
 board_t init_board(board_t b); // returns a board_t as it is at the beginning of the game
 void print_board(board_t b); 
 int char_to_index(char c); // takes a chess board column(a-h) and returns a matrix index(0-7)
-int is_in_bounds(int i, int j); 
+char index_to_char(int index); // takes a chess board column index and returns a chess board column(a-h)
+int is_in_bounds(int i, int j);
 
 int does_rook_see_king(board_t b, int from_i, int from_j, char direction); // helper functions for check_for_check function
 int does_bishop_see_king(board_t b, int from_i, int from_j, char direction);
