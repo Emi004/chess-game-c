@@ -27,8 +27,9 @@ int main(void){
                 sscanf(input, " %c%d %c%d", &from_col, &from_row, &to_col, &to_row) == 4
             ){
                 if( turn == 0 ){
-                    if( white.is_in_check ){
-                        check_for_checkmate(b, white, black);
+                    if( white.is_in_check == 1 ){
+                        printf("checking for checkmate for white\n");
+                        check_for_checkmate(b, 0, white, black);
                     }
                     b = validate_move(b, white, white, black, from_col, from_row, to_col, to_row);
                     print_board(b);
@@ -37,6 +38,10 @@ int main(void){
                     }
                 }
                 else{
+                    if( black.is_in_check == 1 ){
+                        printf("checking for checkmate for black\n");
+                        check_for_checkmate(b, 1, white, black);
+                    }
                     b = validate_move(b, black, white, black, from_col, from_row, to_col, to_row);
                     print_board(b);
                     if( move_succesfull ){

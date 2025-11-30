@@ -6,16 +6,17 @@
 #define BLUE "\x1b[34m"
 #define RESET "\x1b[0m"
 
-extern int game_running;
-extern int move_succesfull;
-extern int turn;
-
 typedef struct {
     int color;
     char type;
     int row;
     int col;
 } piece_t;
+
+typedef struct {
+    int row;
+    int col;
+} square_t;
 
 typedef struct {
     piece_t board[BOARD_SIZE][BOARD_SIZE];
@@ -28,6 +29,19 @@ typedef struct {
     int is_in_check;
 }player_t;
 
+typedef struct {
+    square_t* squares;
+    int length;
+} att_squares_t;
+
+extern int game_running;
+extern int move_succesfull;
+extern int turn;
+extern square_t checking_piece;
+extern char checking_direction;
+
+extern square_t second_checking_piece;
+extern char second_checking_direction;
 
 piece_t get_piece(int color, char type, int row, int col);
 void print_piece(piece_t p);
@@ -56,9 +70,12 @@ int is_valid_rook_move(board_t b, int from_i, int from_j, int to_i, int to_j); /
 int is_valid_knight_move(int from_i, int from_j, int to_i, int to_j);          // check if the move is valid index-wise 
 int is_valid_bishop_move(board_t b, int from_i, int from_j, int to_i, int to_j);
 int is_valid_king_move(board_t b, int from_i, int from_j, int to_i, int to_j);
+int is_valid_pawn_move(int color, int from_i, int from_j, int to_i, int to_j);
 
 board_t validate_move(board_t b, player_t player, player_t white, player_t black, char from_col, int from_row, char to_col, int to_row); // the first player_t argument named player is the acting player, the function takes a move in format "e2 e4", turns the move to matrix indexes, identifies what kind of piece is at that position and whether or not the player is able to make the move; sets move_succesfull and returns a move making function or the initial board state in case move_succesful is set to 0
 
-int check_for_checkmate(board_t b, player_t white, player_t black); // not yet implemented
+square_t get_king_position(board_t b, int player_color);
+att_squares_t get_attacked_squares(board_t b);
+int check_for_checkmate(board_t b, int player_color, player_t white, player_t black); // not yet implemented
 
 #endif
