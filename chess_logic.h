@@ -79,4 +79,5 @@ square_t get_king_position(board_t b, int player_color);
 att_squares_t get_attacked_squares(board_t b);
 int check_for_checkmate(board_t b, int player_color, player_t white, player_t black); // not yet implemented
 
+board_t attempt_castle(board_t b, int player_color, player_t white, player_t black);
 #endif

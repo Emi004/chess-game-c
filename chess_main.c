@@ -63,5 +63,6 @@ int main(void){
             }
         }
     }
+    printf("CHECKMATE\n");
     //printf(BLUE "this is blue\n" RESET);
 }
