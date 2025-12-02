@@ -7,49 +7,128 @@
 #include <stdlib.h>
 #include <arpa/inet.h>
 #include <pthread.h>
+#include "chess_logic.h"
 
 #define BACKLOG 10
-#define I_MAX 100
+#define MAX_MATCHES 20
+#define BOARD_T_SIZE 1024
+//to do on close signal destroy al mutexes and cond variables
 
 typedef struct{
 	char username[50];
-	struct sockaddr_in client_addr;
-	unsigned int client_addr_len;
 	int connfd;
 }client;
 
-client *client_history[I_MAX] ;
+typedef struct{
+	client white_player;
+	client black_player;
+	int players;
+	int turn;
+	pthread_mutex_t mutex;
+	pthread_cond_t cond;
+	board_t board;
+}match;
+
+match matches[MAX_MATCHES];
 
 
-void *run_match(void *args){
-	//client *c = (client *)args;
+void *white_player_thread(void *arg){
+	long i = (long)arg;
+	long bytes_read;
+	char buffer[BOARD_T_SIZE+1];
 	
-	//printf("%d\n",c->connfd);
-	//printf("%d\n",(c+1)->connfd);
+	write(matches[i].white_player.connfd,matches[i].black_player.username,strlen(matches[i].black_player.username)); 
+	write(matches[i].white_player.connfd,&(matches[i].board),sizeof(matches[i].board));
+
+	while(1){  //replace with not checkmate
+		pthread_mutex_lock(&(matches[i].mutex));
+		while(matches[i].turn != 0)
+			pthread_cond_wait(&(matches[i].cond),&(matches[i].mutex));	
+		pthread_mutex_unlock(&(matches[i].mutex));
+		
+		bytes_read = read(matches[i].white_player.connfd,buffer,sizeof(buffer)-1);
+		buffer[bytes_read]='\0';
+//		while(!validate_move(buffer)){
+//			sprintf(buffer,"invalid move\n");
+//			write(matches[i].white_player.connfd,buffer,sizeof(buffer));
+//			bytes_read = read(matches[i].white_player.connfd,buffer,sizeof(buffer)-1);
+//			buffer[bytes_read]='\0';
+//		}
+//		make_move();
+
+		matches[i].turn = 1;
+		sprintf(buffer,"Opponents turn\n");
+		write(matches[i].white_player.connfd,buffer,sizeof(buffer));
+	}
+	return NULL;
+}
+
+void *black_player_thread(void *arg){
+	long i = (long)arg;
+	long bytes_read;
+	char buffer[BOARD_T_SIZE+1];
 	
-	//write(c->connfd, (c+1)->username, strlen((c+1)->username));
-	//write((c+1)->connfd, c->username, strlen(c->username));
-	
-	//close(c->connfd);
-	//close((c+1)->connfd);
-	
-	int i = *(int *)args;
-	
-	write(client_history[i]->connfd, client_history[i+1]->username, strlen(client_history[i+1]->username));
-	write(client_history[i+1]->connfd, client_history[i]->username, strlen(client_history[i]->username));
-	
+	write(matches[i].black_player.connfd,matches[i].white_player.username,strlen(matches[i].white_player.username)); 
+	write(matches[i].black_player.connfd,&(matches[i].board),sizeof(matches[i].board));
+
+	while(1){ //replace with not chekmate
+		pthread_mutex_lock(&(matches[i].mutex));
+		while(matches[i].turn != 1)
+			pthread_cond_wait(&(matches[i].cond),&(matches[i].mutex));
+		pthread_mutex_unlock(&(matches[i].mutex));
+
+		bytes_read = read(matches[i].black_player.connfd,buffer,sizeof(buffer)-1);
+		buffer[bytes_read]='\0';
+//		while(!validate_move(buffer)){
+//			sprintf(buffer,"invalid move\n");
+//			write(matches[i].black_player.connfd,buffer,sizeof(buffer));
+//			bytes_read = read(matches[i].black_player.connfd,buffer,sizeof(buffer)-1);
+//			buffer[bytes_read]='\0';
+//		}
+//		make_move();
+
+		matches[i].turn = 0;
+		sprintf(buffer,"Opponents turn\n");
+		write(matches[i].black_player.connfd,buffer,sizeof(buffer));
+
+	}
 	return NULL;
 }
 
 
+
+//void cleanup(){}
+
+void init_matches(int j){
+	matches[j].players=0;
+	matches[j].turn=0;
+//	matches[j].mutex = PTHREAD_MUTEX_INITIALIZER;
+	if(pthread_mutex_init(&(matches[j].mutex),NULL) !=0){
+		perror("init mutex");
+		exit(1);
+	}
+	if(pthread_cond_init(&(matches[j].cond),NULL) !=0){
+		perror("init cond");
+		exit(1);
+	}
+//	init_board(matches[j].board);
+}
+
 int main(){
 	int sockfd;  
 	struct sockaddr_in server_bind; 
-	int i=0,is_client_waiting = 0;
-	
-	long bytes_read;
-	pthread_t thread_handle;
-	
+	int k=0;
+	long bytes_read,i=0;
+	pthread_t thread_handle;	
+	pthread_attr_t attr;
+	if(pthread_attr_init(&attr) != 0){
+		perror("init attr");
+		exit(1);
+	}
+	if(pthread_attr_setdetachstate(&attr,PTHREAD_CREATE_DETACHED) !=0){
+		perror("detach");
+		exit(1);
+	}
 
 	if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0){
 		perror("socket");
@@ -66,43 +145,60 @@ int main(){
 	
 	if (listen(sockfd, BACKLOG) < 0) {
 		perror("listen");
-		exit(1);
+		exit(1); 
 	}
+	for(int j=0;j<MAX_MATCHES;j++)
+		init_matches(j);	
+
 	printf ("Server listening for connection...\n");
 	
 	while(1){
-		client *c = (client *)malloc(sizeof(client));
-		if ((c->connfd = accept(sockfd, (struct sockaddr *)&(c->client_addr), &(c->client_addr_len))) < 0){
-			perror("accept");
-			exit(1);
-		}
-		bytes_read = read(c->connfd,c->username,sizeof(c->username));
-		c->username[bytes_read] = '\0';
-		
-		if (!is_client_waiting){
-			is_client_waiting =1;
-			client_history[i] = c;
+		while(matches[i].players == 2){
 			i++;
+			k++;
+			if(i == MAX_MATCHES)
+				i=0;
+			if(k == MAX_MATCHES){
+				printf("server is full\n");
+				sleep(100);
+				//to do: do more idk
+			}
 		}
-		else{
-			is_client_waiting = 0;
-			client_history[i] = c;
-			int arg = i-1;
-			if(pthread_create(&thread_handle,NULL,run_match,(void *)&arg  )!=0){
-				perror("pthread_create() error");
+		if (matches[i].players == 0){
+			if ((matches[i].white_player.connfd = accept(sockfd, NULL, NULL)) < 0){
+				perror("accept");
 				exit(1);
 			}
-			if(pthread_detach(thread_handle) != 0)
-				perror("pthread_detach() error");
-			i++;
-			
+			bytes_read = read(matches[i].white_player.connfd,matches[i].white_player.username,49);
+			matches[i].white_player.username[bytes_read] = '\0';
+			matches[i].players = 1;
 		}
-		if(i == I_MAX)
+		else{
+			if ((matches[i].black_player.connfd = accept(sockfd, NULL, NULL)) < 0){
+				perror("accept");
+				exit(1);
+			}
+			bytes_read = read(matches[i].black_player.connfd,matches[i].black_player.username,49);
+			matches[i].black_player.username[bytes_read] = '\0';
+			matches[i].players = 2;
+			if(pthread_create(&thread_handle,&attr,white_player_thread,(void*)i) != 0){
+				perror("create thread");
+				exit(1);
+			}
+			if(pthread_create(&thread_handle,&attr,black_player_thread,(void*)i) != 0){
+				perror("create thread");
+				exit(1);
+			}
+
+		}
+
+
+		i++;
+		if(i == MAX_MATCHES)
 			i = 0;
-		//free(c);
 	}
 
-
+	pthread_attr_destroy(&attr);
 	close(sockfd);
 	return 0;
 }
