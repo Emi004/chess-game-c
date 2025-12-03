@@ -777,6 +777,12 @@ board_t validate_move(board_t b, player_t player, char from_col, int from_row, c
     }
     else if(b.board[from_i][from_j].type == 'r'){
         if( is_valid_rook_move(b, from_i, from_j, to_i, to_j) ){
+
+            if( from_i == 7 && from_j == 7) b.white.can_castle_short = 0;
+            if( from_i == 0 && from_j == 7) b.black.can_castle_short = 0;
+            if( from_i == 7 && from_j == 0) b.white.can_castle_long = 0;
+            if( from_i == 0 && from_j == 0) b.black.can_castle_long = 0;
+
             if( b.board[to_i][to_j].type == '.' ){
                 move_succesfull = 1;
                 return make_move(b, from_col, from_row, to_col, to_row);
