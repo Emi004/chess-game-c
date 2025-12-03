@@ -65,6 +65,7 @@ int does_bishop_see_king(board_t b, int from_i, int from_j, char direction);
 
 int check_for_check(board_t b, int player_to_be_checked); // check if the player with color player_to_be_checked is in check, 
                                                                                           // does NOT set player's is_in_check attribute
+int does_this_move_put_me_in_check(board_t b, int player_color, int from_i, int from_j, int to_i, int to_j);
 
 board_t make_move(board_t b, char from_col, int from_row, char to_col, int to_row); // moves a piece to an empty square, replaces the piece's starting square with an empty square
 board_t take_piece(board_t b, char from_col, int from_row, char to_col, int to_row); // capture a piece, replaces the capturing piece's starting square with an empty square

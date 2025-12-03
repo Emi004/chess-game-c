@@ -402,7 +402,7 @@ board_t make_move(board_t b, char from_col, int from_row, char to_col, int to_ro
             b.white.is_in_check = 0;
         }
         if( check_for_check(b, 1) ){
-            DBG ("black in check.\n");
+            DBG printf("black in check.\n");
             b.black.is_in_check = 1;
 
             DBG printf("DEBUG: checking piece at %d,%d dir=%c\n",
@@ -844,8 +844,15 @@ board_t validate_move(board_t b, player_t player, char from_col, int from_row, c
     }
     else if(b.board[from_i][from_j].type == 'k'){
         if( is_valid_king_move(b, from_i, from_j, to_i, to_j) ){
-            if( player.can_castle_long == 1 ) player.can_castle_long = 0;
-            if( player.can_castle_short == 1 ) player.can_castle_short = 0;
+            if( player.color ){
+                b.black.can_castle_long = 0;
+                b.black.can_castle_short = 0;
+            }
+            else{
+                b.white.can_castle_long = 0;
+                b.white.can_castle_short = 0;
+            }
+
             if( b.board[to_i][to_j].type == '.' ){
                 move_succesfull = 1;
                 return make_move(b, from_col, from_row, to_col, to_row);
@@ -854,11 +861,97 @@ board_t validate_move(board_t b, player_t player, char from_col, int from_row, c
                 move_succesfull = 1;
                 return take_piece(b, from_col, from_row, to_col, to_row);
             }
-        } 
-        else{
-            move_succesfull = 0;
-            return b;
         }
+        else {
+            if( from_col == 'e' && from_row == 1 && to_col == 'h' && to_row == 1 ){ // white short castle
+                if( player.can_castle_short == 1 && player.is_in_check == 0 ){
+                    if( b.board[7][5].type == '.' && b.board[7][6].type == '.' ){
+                        if( !does_this_move_put_me_in_check(b, player.color, from_i, from_j, 7, 6) && !does_this_move_put_me_in_check(b, player.color, from_i, from_j, 7, 5) ){
+                            b.board[7][4] = get_piece(-1, '.', 7, 4);
+                            b.board[7][7] = get_piece(-1, '.', 7, 7);
+                            b.board[7][5] = get_piece(player.color, 'r', 7, 5);
+                            b.board[7][6] = get_piece(player.color, 'k', 7, 6);
+                            move_succesfull = 1;
+                            b.white.can_castle_short = 0;
+                            b.white.can_castle_long = 0;
+                            return b;
+                        }
+                        else{
+                            DBG printf("invalid move: this move would put you in check/ passes through a check\n");
+                            move_succesfull = 0;
+                            return b;
+                        }
+                    }
+                }
+            }
+            else if( from_col == 'e' && from_row == 1 && to_col == 'a' && to_row == 1 ){ // white long  castle
+                if( player.can_castle_long == 1 && player.is_in_check == 0 ){
+                    if( b.board[7][3].type == '.' && b.board[7][2].type == '.' && b.board[7][1].type == '.' ){
+                        if( !does_this_move_put_me_in_check(b, player.color, from_i, from_j, 7, 2) && !does_this_move_put_me_in_check(b, player.color, from_i, from_j, 7, 3) ){
+                            b.board[7][4] = get_piece(-1, '.', 7, 4);
+                            b.board[7][0] = get_piece(-1, '.', 7, 0);
+                            b.board[7][2] = get_piece(player.color, 'k', 7, 2);
+                            b.board[7][3] = get_piece(player.color, 'r', 7, 3);
+                            move_succesfull = 1;
+                            b.white.can_castle_short = 0;
+                            b.white.can_castle_long = 0;
+                            return b;
+                        }
+                        else{
+                            DBG printf("invalid move: this move would put you in check/ passes through a check\n");
+                            move_succesfull = 0;
+                            return b;
+                        }
+                    }
+                }
+            }
+            else if( from_col == 'e' && from_row == 8 && to_col == 'h' && to_row == 8 ){ // black short castle
+                if( player.can_castle_short == 1 && player.is_in_check == 0 ){
+                    if( b.board[0][5].type == '.' && b.board[0][6].type == '.' ){
+                        if( !does_this_move_put_me_in_check(b, player.color, from_i, from_j, 0, 6) && !does_this_move_put_me_in_check(b, player.color, from_i, from_j, 0, 5) ){
+                            b.board[0][4] = get_piece(-1, '.', 0, 4);
+                            b.board[0][7] = get_piece(-1, '.', 0, 7);
+                            b.board[0][5] = get_piece(player.color, 'r', 0, 5);
+                            b.board[0][6] = get_piece(player.color, 'k', 0, 6);
+                            move_succesfull = 1;
+                            b.black.can_castle_short = 0;
+                            b.black.can_castle_long = 0;
+                            return b;
+                        }
+                        else{
+                            DBG printf("invalid move: this move would put you in check/ passes through a check\n");
+                            move_succesfull = 0;
+                            return b;
+                        }
+                    }
+                }
+            }
+            else if( from_col == 'e' && from_row == 8 && to_col == 'a' && to_row == 8 ){ // black long  castle
+                if( player.can_castle_long == 1 && player.is_in_check == 0 ){
+                    if( b.board[0][3].type == '.' && b.board[0][2].type == '.' && b.board[0][1].type == '.' ){
+                        if( !does_this_move_put_me_in_check(b, player.color, from_i, from_j, 0, 2) && !does_this_move_put_me_in_check(b, player.color, from_i, from_j, 0, 3) ){
+                            b.board[0][4] = get_piece(-1, '.', 0, 4);
+                            b.board[0][0] = get_piece(-1, '.', 0, 0);
+                            b.board[0][2] = get_piece(player.color, 'k', 7, 2);
+                            b.board[0][3] = get_piece(player.color, 'r', 7, 3);
+                            move_succesfull = 1;
+                            b.black.can_castle_short = 0;
+                            b.black.can_castle_long = 0;
+                            return b;
+                        }
+                        else{
+                            DBG printf("invalid move: this move would put you in check/ passes through a check\n");
+                            move_succesfull = 0;
+                            return b;
+                        }
+                    }
+                }
+            }
+            else{
+                move_succesfull = 0;
+                return b;
+            }
+        } 
     }
     else{
         return b;
@@ -961,6 +1054,8 @@ att_squares_t get_attacked_squares(board_t b){
 
 board_t copy_board(board_t b){
     board_t new_board;
+    new_board.black = b.black;
+    new_board.white = b.white;
     for(int i = 0; i < BOARD_SIZE; i++){
         for(int j = 0; j < BOARD_SIZE; j++){
             new_board.board[i][j] = b.board[i][j];
