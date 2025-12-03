@@ -11,7 +11,7 @@ int main(void){
     player_t black = { 1, 1, 1, 0 };
     char from_col, to_col;
     int  from_row, to_row;
-    b = init_board(b);
+    b = init_board(b, white, black);
     print_board(b);
     char input[128];
     while(game_running){
@@ -29,9 +29,9 @@ int main(void){
                 if( turn == 0 ){
                     if( white.is_in_check == 1 ){
                         printf("checking for checkmate for white\n");
-                        check_for_checkmate(b, 0, white, black);
+                        check_for_checkmate(b, 0);
                     }
-                    b = validate_move(b, white, white, black, from_col, from_row, to_col, to_row);
+                    b = validate_move(b, b.white, from_col, from_row, to_col, to_row);
                     print_board(b);
                     if( move_succesfull ){
                         turn = 1 - turn;
@@ -40,9 +40,9 @@ int main(void){
                 else{
                     if( black.is_in_check == 1 ){
                         printf("checking for checkmate for black\n");
-                        check_for_checkmate(b, 1, white, black);
+                        check_for_checkmate(b, 1);
                     }
-                    b = validate_move(b, black, white, black, from_col, from_row, to_col, to_row);
+                    b = validate_move(b, b.black, from_col, from_row, to_col, to_row);
                     print_board(b);
                     if( move_succesfull ){
                         turn = 1 - turn;
