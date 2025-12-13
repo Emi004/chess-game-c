@@ -11,34 +11,29 @@
 
 #define BACKLOG 10
 #define MAX_MATCHES 20
-#define BOARD_T_SIZE 1024
+#define BOARD_T_SIZE 1168
 //to do on close signal destroy al mutexes and cond variables
 
-typedef struct{
-	char username[50];
-	int connfd;
-}client;
 
 typedef struct{
-	client white_player;
-	client black_player;
 	int players;
 	int turn;
 	pthread_mutex_t mutex;
 	pthread_cond_t cond;
 	board_t board;
-}match;
+}match_t;
 
-match matches[MAX_MATCHES];
+match_t matches[MAX_MATCHES];
 
 
 void *white_player_thread(void *arg){
 	long i = (long)arg;
 	long bytes_read;
 	char buffer[BOARD_T_SIZE+1];
-	
-	write(matches[i].white_player.connfd,matches[i].black_player.username,strlen(matches[i].black_player.username)); 
-	write(matches[i].white_player.connfd,&(matches[i].board),sizeof(matches[i].board));
+	int return_value;
+
+	write(matches[i].board.white.connfd,matches[i].board.black.username,strlen(matches[i].board.black.username)); 
+	write(matches[i].board.white.connfd,&(matches[i].board),sizeof(matches[i].board));
 
 	while(1){  //replace with not checkmate
 		pthread_mutex_lock(&(matches[i].mutex));
@@ -46,20 +41,31 @@ void *white_player_thread(void *arg){
 			pthread_cond_wait(&(matches[i].cond),&(matches[i].mutex));	
 		pthread_mutex_unlock(&(matches[i].mutex));
 		
-		bytes_read = read(matches[i].white_player.connfd,buffer,sizeof(buffer)-1);
+		bytes_read = read(matches[i].board.white.connfd,buffer,sizeof(buffer)-1);
 		buffer[bytes_read]='\0';
-//		while(!validate_move(buffer)){
-//			sprintf(buffer,"invalid move\n");
-//			write(matches[i].white_player.connfd,buffer,sizeof(buffer));
-//			bytes_read = read(matches[i].white_player.connfd,buffer,sizeof(buffer)-1);
-//			buffer[bytes_read]='\0';
-//		}
-//		make_move();
+
+		while((return_value = chess_main(matches[i].board,0,buffer)) == 0){
+			sprintf(buffer,"Invalid move, enter another move\n");
+			write(matches[i].board.white.connfd,buffer,sizeof(buffer));
+			bytes_read = read(matches[i].board.white.connfd,buffer,sizeof(buffer)-1);
+			buffer[bytes_read]='\0';
+		}
+		if(return_value == 2){
+			sprintf(buffer,"You win!\n");
+			break;
+		}
+		else if(return_value == 3){
+			sprintf(buffer,"You lose :(\n");
+			break;
+		}
 
 		matches[i].turn = 1;
 		sprintf(buffer,"Opponents turn\n");
-		write(matches[i].white_player.connfd,buffer,sizeof(buffer));
+		write(matches[i].board.white.connfd,buffer,sizeof(buffer));
 	}
+	write(matches[i].board.white.connfd,buffer,sizeof(buffer));
+	matches[i].players = 0;
+
 	return NULL;
 }
 
@@ -67,37 +73,51 @@ void *black_player_thread(void *arg){
 	long i = (long)arg;
 	long bytes_read;
 	char buffer[BOARD_T_SIZE+1];
-	
-	write(matches[i].black_player.connfd,matches[i].white_player.username,strlen(matches[i].white_player.username)); 
-	write(matches[i].black_player.connfd,&(matches[i].board),sizeof(matches[i].board));
+	int return_value;
 
-	while(1){ //replace with not chekmate
+	write(matches[i].board.black.connfd,matches[i].board.white.username,strlen(matches[i].board.white.username)); 
+	write(matches[i].board.black.connfd,&(matches[i].board),sizeof(matches[i].board));
+
+	while(1){ 
 		pthread_mutex_lock(&(matches[i].mutex));
 		while(matches[i].turn != 1)
 			pthread_cond_wait(&(matches[i].cond),&(matches[i].mutex));
 		pthread_mutex_unlock(&(matches[i].mutex));
 
-		bytes_read = read(matches[i].black_player.connfd,buffer,sizeof(buffer)-1);
+		bytes_read = read(matches[i].board.black.connfd,buffer,sizeof(buffer)-1);
 		buffer[bytes_read]='\0';
-//		while(!validate_move(buffer)){
-//			sprintf(buffer,"invalid move\n");
-//			write(matches[i].black_player.connfd,buffer,sizeof(buffer));
-//			bytes_read = read(matches[i].black_player.connfd,buffer,sizeof(buffer)-1);
-//			buffer[bytes_read]='\0';
-//		}
-//		make_move();
+
+		while((return_value = chess_main(matches[i].board,1,buffer)) == 0){
+			sprintf(buffer,"Invalid move, enter another move\n");
+			write(matches[i].board.black.connfd,buffer,sizeof(buffer));
+			bytes_read = read(matches[i].board.black.connfd,buffer,sizeof(buffer)-1);
+			buffer[bytes_read]='\0';
+		}
+		if(return_value == 3){
+			sprintf(buffer,"You win!\n");
+			break;
+		}
+		else if(return_value == 2){
+			sprintf(buffer,"You lose :(\n");
+			break;
+		}
 
 		matches[i].turn = 0;
 		sprintf(buffer,"Opponents turn\n");
-		write(matches[i].black_player.connfd,buffer,sizeof(buffer));
+		write(matches[i].board.black.connfd,buffer,sizeof(buffer));
 
 	}
+	write(matches[i].board.white.connfd,buffer,sizeof(buffer));
+
 	return NULL;
 }
 
-
-
-//void cleanup(){}
+void init_player(player_t *p,int color){
+	p->can_castle_long = 1;
+	p->can_castle_short = 1;
+	p->color = color;
+	p->is_in_check = 0;
+}
 
 void init_matches(int j){
 	matches[j].players=0;
@@ -111,7 +131,9 @@ void init_matches(int j){
 		perror("init cond");
 		exit(1);
 	}
-//	init_board(matches[j].board);
+	matches[j].board = init_board(matches[j].board,matches[j].board.white,matches[j].board.black);
+	init_player(&(matches[j].board.white),0);
+	init_player(&(matches[j].board.black),1);
 }
 
 int main(){
@@ -160,26 +182,28 @@ int main(){
 				i=0;
 			if(k == MAX_MATCHES){
 				printf("server is full\n");
+				k = 0;
 				sleep(100);
 				//to do: do more idk
 			}
 		}
+		k = 0;
 		if (matches[i].players == 0){
-			if ((matches[i].white_player.connfd = accept(sockfd, NULL, NULL)) < 0){
+			if ((matches[i].board.white.connfd = accept(sockfd, NULL, NULL)) < 0){
 				perror("accept");
 				exit(1);
 			}
-			bytes_read = read(matches[i].white_player.connfd,matches[i].white_player.username,49);
-			matches[i].white_player.username[bytes_read] = '\0';
+			bytes_read = read(matches[i].board.white.connfd,matches[i].board.white.username,49);
+			matches[i].board.white.username[bytes_read] = '\0';
 			matches[i].players = 1;
 		}
 		else{
-			if ((matches[i].black_player.connfd = accept(sockfd, NULL, NULL)) < 0){
+			if ((matches[i].board.black.connfd = accept(sockfd, NULL, NULL)) < 0){
 				perror("accept");
 				exit(1);
 			}
-			bytes_read = read(matches[i].black_player.connfd,matches[i].black_player.username,49);
-			matches[i].black_player.username[bytes_read] = '\0';
+			bytes_read = read(matches[i].board.black.connfd,matches[i].board.black.username,49);
+			matches[i].board.black.username[bytes_read] = '\0';
 			matches[i].players = 2;
 			if(pthread_create(&thread_handle,&attr,white_player_thread,(void*)i) != 0){
 				perror("create thread");
@@ -191,7 +215,6 @@ int main(){
 			}
 
 		}
-
 
 		i++;
 		if(i == MAX_MATCHES)

@@ -29,6 +29,8 @@ typedef struct {
     int can_castle_long; // O-O-O
     int color;
     int is_in_check;
+    char username[50];
+	int connfd;
 }player_t;
 
 typedef struct {
@@ -67,9 +69,9 @@ int check_for_check(board_t b, int player_to_be_checked); // check if the player
                                                                                           // does NOT set player's is_in_check attribute
 int does_this_move_put_me_in_check(board_t b, int player_color, int from_i, int from_j, int to_i, int to_j);
 
-board_t make_move(board_t b, char from_col, int from_row, char to_col, int to_row); // moves a piece to an empty square, replaces the piece's starting square with an empty square
-board_t take_piece(board_t b, char from_col, int from_row, char to_col, int to_row); // capture a piece, replaces the capturing piece's starting square with an empty square
-board_t promote(board_t b, int color, char from_col, int from_row, char to_col, int to_row); // promotes a pawn to a queen
+board_t make_move(board_t b, char from_col, int from_row, char to_col, int to_row, int *move_succesfull); // moves a piece to an empty square, replaces the piece's starting square with an empty square
+board_t take_piece(board_t b, char from_col, int from_row, char to_col, int to_row, int *move_succesfull); // capture a piece, replaces the capturing piece's starting square with an empty square
+board_t promote(board_t b, int color, char from_col, int from_row, char to_col, int to_row, int *move_succesfull); // promotes a pawn to a queen
 
 /*all the move functions will effectively perform the move, then check if the move puts a player into check:
     if the player who makes the move would be put into check by his own move, the board reverts to its original positon, move_succesfull is set to 0 and an error message is displayed;
@@ -82,11 +84,13 @@ int is_valid_bishop_move(board_t b, int from_i, int from_j, int to_i, int to_j);
 int is_valid_king_move(board_t b, int from_i, int from_j, int to_i, int to_j);
 int is_valid_pawn_move(int color, int from_i, int from_j, int to_i, int to_j);
 
-board_t validate_move(board_t b, player_t player, char from_col, int from_row, char to_col, int to_row); // the first player_t argument named player is the acting player, the function takes a move in format "e2 e4", turns the move to matrix indexes, identifies what kind of piece is at that position and whether or not the player is able to make the move; sets move_succesfull and returns a move making function or the initial board state in case move_succesful is set to 0
+board_t validate_move(board_t b, player_t player, char from_col, int from_row, char to_col, int to_row, int *move_succesfull); // the first player_t argument named player is the acting player, the function takes a move in format "e2 e4", turns the move to matrix indexes, identifies what kind of piece is at that position and whether or not the player is able to make the move; sets move_succesfull and returns a move making function or the initial board state in case move_succesful is set to 0
 
 square_t get_king_position(board_t b, int player_color);
 att_squares_t get_attacked_squares(board_t b);
 int check_for_checkmate(board_t b, int player_color); // now implemented, its really quite literal
 
 board_t attempt_castle(board_t b, int player_color);
+
+int chess_main(board_t b, int turn, char input[]); // starting point function server uses to interact with other chess functions; return 0 for invalid move, 1 for valid move, 2 for white checkmate, 3 for black checkmate ~ AleX
 #endif

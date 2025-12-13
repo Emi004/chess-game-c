@@ -8,7 +8,7 @@
 #include <arpa/inet.h>
 #include "chess_logic.h"
 
-#define BOARD_T_SIZE 1024
+#define BOARD_T_SIZE 1168
 
 board_t binary_to_board_t(char buffer[]);
 
