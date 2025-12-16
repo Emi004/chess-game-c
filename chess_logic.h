@@ -92,5 +92,5 @@ int check_for_checkmate(board_t b, int player_color); // now implemented, its re
 
 board_t attempt_castle(board_t b, int player_color);
 
-int chess_main(board_t b, int turn, char input[]); // starting point function server uses to interact with other chess functions; return 0 for invalid move, 1 for valid move, 2 for white checkmate, 3 for black checkmate ~ AleX
+int chess_main(board_t* b, int* turn, char input[]); // starting point function server uses to interact with other chess functions; return 0 for invalid move, 1 for valid move, 2 for white checkmate, 3 for black checkmate ~ AleX
 #endif

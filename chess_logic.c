@@ -1231,26 +1231,26 @@ board_t attempt_castle(board_t b, int player_color){
     return b;
 }
 
-int chess_main(board_t b, int turn, char input[]){ //return 0 for invalid move, 1 for valid move, 2 for white checkmate, 3 for black chekmate
+int chess_main(board_t* b, int* turn, char input[]){ //return 0 for invalid move, 1 for valid move, 2 for white checkmate, 3 for black chekmate
     char from_col, to_col;
     int  from_row, to_row;
     int move_succesfull;
     if(sscanf(input, "%c%d %c%d", &from_col, &from_row, &to_col, &to_row) == 4){
-        if( turn == 0 ){
-            b = validate_move(b, b.white, from_col, from_row, to_col, to_row,&move_succesfull);
+        if( *turn == 0 ){
+            *b = validate_move(*b, b->white, from_col, from_row, to_col, to_row,&move_succesfull);
             
             if(!move_succesfull)
                 return 0;
-            if(b.black.is_in_check == 1 && check_for_checkmate(b,1))
+            if(b->black.is_in_check == 1 && check_for_checkmate(*b,1))
                 return 2;
         }
         else{
-            b = validate_move(b, b.black, from_col, from_row, to_col, to_row,&move_succesfull);
+            *b = validate_move(*b, b->black, from_col, from_row, to_col, to_row,&move_succesfull);
             
             if(!move_succesfull)
                 return 0;
 
-            if(b.white.is_in_check == 1 && check_for_checkmate(b,0))
+            if(b->white.is_in_check == 1 && check_for_checkmate(*b,0))
                 return 3;
         }
         
@@ -1264,6 +1264,7 @@ int chess_main(board_t b, int turn, char input[]){ //return 0 for invalid move, 
     else{
         return 0;
     }
+    *turn = 1 - *turn;
     return 1;
 
 }

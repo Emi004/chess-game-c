@@ -9,60 +9,34 @@ int main(void){
     board_t b;
     player_t white = { 1, 1, 0, 0 };
     player_t black = { 1, 1, 1, 0 };
-    char from_col, to_col;
-    int  from_row, to_row;
     b = init_board(b, white, black);
-    print_board(b);
+    //print_board(b);
+    
+    
+    //printf(BLUE "this is blue\n" RESET);
+
     char input[128];
-    while(game_running){
-        if( !turn ){
-            printf("White's turn; ");
-        }
-        else {
-            printf("Black's turn; ");
-        }
-        printf("Enter move (e.g., e2 e4): ");
+    int turn = 0;
+    for(int i = 0; i < 10; i++){
+        print_board(b);
+        printf("turn: %d\n", turn);
         if(fgets(input, sizeof(input), stdin) != NULL){
-            if(
-                sscanf(input, " %c%d %c%d", &from_col, &from_row, &to_col, &to_row) == 4
-            ){
-                if( turn == 0 ){
-                    if( white.is_in_check == 1 ){
-                        printf("checking for checkmate for white\n");
-                        check_for_checkmate(b, 0);
-                    }
-                    b = validate_move(b, b.white, from_col, from_row, to_col, to_row);
-                    print_board(b);
-                    if( move_succesfull ){
-                        turn = 1 - turn;
-                    }
-                }
-                else{
-                    if( black.is_in_check == 1 ){
-                        printf("checking for checkmate for black\n");
-                        check_for_checkmate(b, 1);
-                    }
-                    b = validate_move(b, b.black, from_col, from_row, to_col, to_row);
-                    print_board(b);
-                    if( move_succesfull ){
-                        turn = 1 - turn;
-                    }
-                    else{
-                        printf("invalid move.\n");
-                    }
-                }
-            }
-            else if( strcmp(input, "O-O\n") == 0 || strcmp(input, "o-o\n") == 0 ){
-                printf("short castle\n");
-            }
-            else if( strcmp(input, "O-O-O\n") == 0 || strcmp(input, "o-o-o\n") == 0 ){
-                printf("long castle\n");
-            }
-             else {
-                printf("Invalid input format. Use: c2 c4\n");
+            int res = chess_main(&b, &turn, input);
+            switch(res){
+                case 0:
+                    printf("invalid move\n");
+                    break;
+                case 1:
+                    printf("valid move\n");
+                    break;
+                case 2:
+                    break;
+                case 3:
+
+                    break;
+                default:
+                    break;
             }
         }
     }
-    printf("CHECKMATE\n");
-    //printf(BLUE "this is blue\n" RESET);
 }
