@@ -347,7 +347,7 @@ int main(void) {
         MOVE_T move=ui_return_move(ch, square, &board);
         if (move.move_made) {
             move_succesfull = rand()%2;
-            printf("Move made from (%d, %d) to (%d, %d) move succesfull (%d)\n", move.from_x, move.from_y, move.to_x, move.to_y, move_succesfull);
+            // printf("Move made from (%d, %d) to (%d, %d) move succesfull (%d)\n", move.from_x, move.from_y, move.to_x, move.to_y, move_succesfull);
             ui_render_move(move, square, &board);
         }
     }
