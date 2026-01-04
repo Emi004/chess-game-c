@@ -28,10 +28,11 @@
 #define BLUE "\x1b[34m"
 #define RESET "\x1b[0m"
 
-int toggle_to_move_square = 0; //changes the way click actions on second press
-int from_matrix_index_x, from_matrix_index_y;
-int to_matrix_index_x, to_matrix_index_y;
 
+
+typedef struct {
+    int from_x, from_y, to_x, to_y,move_made;
+}MOVE_T;
 
 typedef enum {
     COLOR_PAIR_BLACK_LIGHT = 1,
@@ -202,100 +203,87 @@ void render_board(WINDOW *win, board_t board) {
     wrefresh(win);
 }
 
-void render_move(int ch, WINDOW *win, player_t player, player_t white, player_t black, board_t *board) {
+MOVE_T ui_return_move(int ch, WINDOW *win, board_t *board) {
+    static int toggle_to_move_square = 0;
+    static int from_x, from_y;
+
     MEVENT event;
-
-
     int win_x, win_y, win_width, win_height;
     getbegyx(win, win_y, win_x);
     getmaxyx(win, win_height, win_width);
+
+    MOVE_T move={0,0,0,0,0};
+
+
     int board_start_x = (win_width - TABLE_WIDTH) / 2 + win_x;
     int board_start_y = (win_height - TABLE_HEIGHT) / 2 + win_y;
+    int board_end_x = board_start_x + TABLE_WIDTH;
+    int board_end_y = board_start_y + TABLE_HEIGHT;
 
+    if (ch == KEY_MOUSE && getmouse(&event) == OK && (event.bstate & BUTTON1_PRESSED)) {
+        if (event.x >= board_start_x && event.x < board_end_x && event.y >= board_start_y && event.y < board_end_y) {
+            int col = (event.x - board_start_x) / SQUARE_WIDTH;
+            int row = (event.y - board_start_y) / SQUARE_HEIGHT;
 
-    if (ch == KEY_MOUSE) {
-        if (getmouse(&event) == OK) {
-            if (event.bstate & BUTTON1_PRESSED) {
-                if (event.x >= win_x && event.y >= win_y && event.x < win_x + win_width && event.y < win_y +
-                    win_height) {
-                    int board_end_x = board_start_x + TABLE_WIDTH;
-                    int board_end_y = board_start_y + TABLE_HEIGHT;
-                    switch (toggle_to_move_square) {
-                        case 0:
-
-                            if (event.x >= board_start_x && event.y >= board_start_y && event.x < board_end_x && event.y
-                                <
-                                board_end_y) {
-                                from_matrix_index_x = (event.x - board_start_x) / SQUARE_WIDTH;
-                                from_matrix_index_y = (event.y - board_start_y) / SQUARE_HEIGHT;
-
-                                if (board->board[from_matrix_index_y][from_matrix_index_x].color != -1) {
-                                    draw_square(win, from_matrix_index_y, from_matrix_index_x, board,
-                                                COLOR_PAIR_HIGHLIGHT, COLOR_PAIR_HIGHLIGHT_WHITE,
-                                                COLOR_PAIR_HIGHLIGHT_BLACK);
-                                    toggle_to_move_square = 1;
-                                }
-                            }
-
-
-                            break;
-                        case 1:
-
-                            if (event.x >= board_start_x && event.y >= board_start_y && event.x < board_end_x && event.y
-                                <
-                                board_end_y) {
-                                to_matrix_index_x = (event.x - board_start_x) / SQUARE_WIDTH;
-                                to_matrix_index_y = (event.y - board_start_y) / SQUARE_HEIGHT;
-
-                                *board = validate_move(*board, player, white, black, index_to_char(from_matrix_index_x),
-                                                       -1 * from_matrix_index_y + BOARD_SIZE,
-                                                       index_to_char(to_matrix_index_x),
-                                                       -1 * to_matrix_index_y + BOARD_SIZE);
-
-                                if (move_succesfull == 0) {
-                                    draw_square(win, to_matrix_index_y, to_matrix_index_x, board,
-                                                COLOR_PAIR_HIGHLIGHT_RED, COLOR_PAIR_HIGHLIGHT_RED_WHITE,
-                                                COLOR_PAIR_HIGHLIGHT_BLACK);
-                                    sleep(1);
-                                }
-
-                                draw_square(win, to_matrix_index_y, to_matrix_index_x, board,
-                                            (to_matrix_index_x + to_matrix_index_y) % 2 == 0
-                                                ? COLOR_PAIR_LIGHT
-                                                : COLOR_PAIR_DARK,
-                                            (to_matrix_index_x + to_matrix_index_y) % 2 == 0
-                                                ? COLOR_PAIR_WHITE_LIGHT
-                                                : COLOR_PAIR_WHITE_DARK,
-                                            (to_matrix_index_x + to_matrix_index_y) % 2 == 0
-                                                ? COLOR_PAIR_BLACK_LIGHT
-                                                : COLOR_PAIR_BLACK_DARK);
-                                draw_square(win, from_matrix_index_y, from_matrix_index_x, board,
-                                            (from_matrix_index_x + from_matrix_index_y) % 2 == 0
-                                                ? COLOR_PAIR_LIGHT
-                                                : COLOR_PAIR_DARK,
-                                            (from_matrix_index_x + from_matrix_index_y) % 2 == 0
-                                                ? COLOR_PAIR_WHITE_LIGHT
-                                                : COLOR_PAIR_WHITE_DARK,
-                                            (from_matrix_index_x + from_matrix_index_y) % 2 == 0
-                                                ? COLOR_PAIR_BLACK_LIGHT
-                                                : COLOR_PAIR_BLACK_DARK);
-                                toggle_to_move_square = 0;
-                            }
-
-
-                            break;
-                    }
-                    wrefresh(win);
+            if (toggle_to_move_square == 0) {
+                if (board->board[row][col].color != -1) {
+                    from_x = col;
+                    from_y = row;
+                    draw_square(win, row, col, board,
+                                COLOR_PAIR_HIGHLIGHT, COLOR_PAIR_HIGHLIGHT_WHITE,
+                                COLOR_PAIR_HIGHLIGHT_BLACK);
+                    toggle_to_move_square = 1;
                 }
-            }
-            if (event.bstate & BUTTON1_RELEASED && toggle_to_move_square) {
-                if (event.x >= win_x && event.y >= win_y && event.x < win_x + win_width && event.y < win_y +
-                    win_height) {
-                    wrefresh(win);
-                }
+            } else {
+                move.from_x = from_x;
+                move.from_y = from_y;
+                move.to_x = col;
+                move.to_y = row;
+                move.move_made=1;
+                toggle_to_move_square = 0;
             }
         }
     }
+
+    return move;
+}
+
+void ui_render_move(MOVE_T move, WINDOW *win, board_t *board) {
+    if (move.move_made) {
+        int from_x = move.from_x;
+        int from_y = move.from_y;
+        int to_x = move.to_x;
+        int to_y = move.to_y;
+
+        if (move_succesfull == 0) {
+            draw_square(win, to_y, to_x, board,
+                        COLOR_PAIR_HIGHLIGHT_RED, COLOR_PAIR_HIGHLIGHT_RED_WHITE,
+                        COLOR_PAIR_HIGHLIGHT_RED_BLACK);
+            sleep(1);
+        }
+
+        draw_square(win, to_y, to_x, board,
+                    (to_x + to_y) % 2 == 0
+                        ? COLOR_PAIR_LIGHT
+                        : COLOR_PAIR_DARK,
+                    (to_x + to_y) % 2 == 0
+                        ? COLOR_PAIR_WHITE_LIGHT
+                        : COLOR_PAIR_WHITE_DARK,
+                    (to_x + to_y) % 2 == 0
+                        ? COLOR_PAIR_BLACK_LIGHT
+                        : COLOR_PAIR_BLACK_DARK);
+        draw_square(win, from_y, from_x, board,
+                    (from_x + from_y) % 2 == 0
+                        ? COLOR_PAIR_LIGHT
+                        : COLOR_PAIR_DARK,
+                    (from_x + from_y) % 2 == 0
+                        ? COLOR_PAIR_WHITE_LIGHT
+                        : COLOR_PAIR_WHITE_DARK,
+                    (from_x + from_y) % 2 == 0
+                        ? COLOR_PAIR_BLACK_LIGHT
+                        : COLOR_PAIR_BLACK_DARK);
+    }
+    wrefresh(win);
 }
 
 int main(void) {
@@ -304,7 +292,7 @@ int main(void) {
     board_t board;
     player_t white = {1, 1, 0, 0};
     player_t black = {1, 1, 1, 0};
-    board = init_board(board);
+    board = init_board(board, white, black);
     board.board[3][1] = (piece_t){0, 'k', 1, 3};
     setlocale(LC_ALL, "");
     initscr();
@@ -356,7 +344,12 @@ int main(void) {
     render_board(square, board);
     while ((ch = getch()) != 27) {
 
-        render_move(ch, square, white, white, black, &board);
+        MOVE_T move=ui_return_move(ch, square, &board);
+        if (move.move_made) {
+            move_succesfull = rand()%2;
+            printf("Move made from (%d, %d) to (%d, %d) move succesfull (%d)\n", move.from_x, move.from_y, move.to_x, move.to_y, move_succesfull);
+            ui_render_move(move, square, &board);
+        }
     }
     endwin();
     return 0;
