@@ -16,11 +16,11 @@
 
 
 typedef struct{
-	int players;
-	int turn;
-	pthread_mutex_t mutex;
-	pthread_cond_t cond;
-	board_t board;
+	int players;			//used for matchmaking
+	int turn;  				//0 white turn, 1 black turn
+	pthread_mutex_t mutex;	
+	pthread_cond_t cond;	
+	board_t board;			
 }match_t;
 
 match_t matches[MAX_MATCHES];
@@ -33,9 +33,9 @@ void *white_player_thread(void *arg){
 	int return_value;
 
 	write(matches[i].board.white.connfd,matches[i].board.black.username,strlen(matches[i].board.black.username)); 
-	write(matches[i].board.white.connfd,&(matches[i].board),sizeof(matches[i].board));
+	write(matches[i].board.white.connfd,&(matches[i].board),BOARD_T_SIZE); //nvm i might be cooking actually
 
-	while(1){  //replace with not checkmate
+	while(1){ 
 		pthread_mutex_lock(&(matches[i].mutex));
 		while(matches[i].turn != 0)
 			pthread_cond_wait(&(matches[i].cond),&(matches[i].mutex));	
@@ -44,7 +44,7 @@ void *white_player_thread(void *arg){
 		bytes_read = read(matches[i].board.white.connfd,buffer,sizeof(buffer)-1);
 		buffer[bytes_read]='\0';
 
-		while((return_value = chess_main(matches[i].board,0,buffer)) == 0){
+		while((return_value = chess_main(&(matches[i].board),0,buffer)) == 0){ //return 0 for invalid move, 1 for valid move, 2 for white checkmate, 3 for black chekmate
 			sprintf(buffer,"Invalid move, enter another move\n");
 			write(matches[i].board.white.connfd,buffer,sizeof(buffer));
 			bytes_read = read(matches[i].board.white.connfd,buffer,sizeof(buffer)-1);
@@ -52,14 +52,19 @@ void *white_player_thread(void *arg){
 		}
 		if(return_value == 2){
 			sprintf(buffer,"You win!\n");
+			matches[i].turn = 1;
+			pthread_cond_signal(&(matches[i].cond));
 			break;
 		}
 		else if(return_value == 3){
 			sprintf(buffer,"You lose :(\n");
+			matches[i].turn = 1;
+			pthread_cond_signal(&(matches[i].cond));
 			break;
 		}
 
 		matches[i].turn = 1;
+		pthread_cond_signal(&(matches[i].cond));
 		sprintf(buffer,"Opponents turn\n");
 		write(matches[i].board.white.connfd,buffer,sizeof(buffer));
 	}
@@ -68,7 +73,7 @@ void *white_player_thread(void *arg){
 
 	return NULL;
 }
-
+/*
 void *black_player_thread(void *arg){
 	long i = (long)arg;
 	long bytes_read;
@@ -110,7 +115,7 @@ void *black_player_thread(void *arg){
 	write(matches[i].board.white.connfd,buffer,sizeof(buffer));
 
 	return NULL;
-}
+} */
 
 void init_player(player_t *p,int color){
 	p->can_castle_long = 1;
@@ -159,7 +164,7 @@ int main(){
 	memset(&server_bind, 0, sizeof(server_bind)); 
 	server_bind.sin_family = AF_INET; 
 	server_bind.sin_addr.s_addr = INADDR_ANY; 
-	server_bind.sin_port = htons(4556); 
+	server_bind.sin_port = htons(4555); 
 	if (bind(sockfd, (struct sockaddr *)&server_bind, sizeof(server_bind)) < 0) {
 		perror("bind");
 		exit(1);
@@ -189,15 +194,18 @@ int main(){
 		}
 		k = 0;
 		if (matches[i].players == 0){
+	
 			if ((matches[i].board.white.connfd = accept(sockfd, NULL, NULL)) < 0){
 				perror("accept");
 				exit(1);
 			}
+							
 			bytes_read = read(matches[i].board.white.connfd,matches[i].board.white.username,49);
 			matches[i].board.white.username[bytes_read] = '\0';
 			matches[i].players = 1;
 		}
 		else{
+
 			if ((matches[i].board.black.connfd = accept(sockfd, NULL, NULL)) < 0){
 				perror("accept");
 				exit(1);
@@ -209,16 +217,16 @@ int main(){
 				perror("create thread");
 				exit(1);
 			}
-			if(pthread_create(&thread_handle,&attr,black_player_thread,(void*)i) != 0){
-				perror("create thread");
-				exit(1);
-			}
+//			if(pthread_create(&thread_handle,&attr,black_player_thread,(void*)i) != 0){
+//				perror("create thread");
+//				exit(1);
+//			}
 
 		}
 
-		i++;
-		if(i == MAX_MATCHES)
-			i = 0;
+//		i++;
+//		if(i == MAX_MATCHES)
+//			i = 0;
 	}
 
 	pthread_attr_destroy(&attr);
