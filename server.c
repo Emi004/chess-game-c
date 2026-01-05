@@ -41,8 +41,8 @@ void *white_player_thread(void *arg){
 			pthread_cond_wait(&(matches[i].cond),&(matches[i].mutex));	
 		pthread_mutex_unlock(&(matches[i].mutex));
 		
-		bytes_read = read(matches[i].board.white.connfd,buffer,sizeof(buffer)-1);
-		buffer[bytes_read]='\0';
+		bytes_read = read(matches[i].board.white.connfd,buffer,sizeof(buffer)-1); 
+		buffer[bytes_read]='\0'; //needs to read the move properly
 
 		while((return_value = chess_main(&(matches[i].board),0,buffer)) == 0){ //return 0 for invalid move, 1 for valid move, 2 for white checkmate, 3 for black chekmate
 			sprintf(buffer,"Invalid move, enter another move\n");
@@ -57,7 +57,7 @@ void *white_player_thread(void *arg){
 			break;
 		}
 		else if(return_value == 3){
-			sprintf(buffer,"You lose :(\n");
+			sprintf(buffer,"You lose.\n");
 			matches[i].turn = 1;
 			pthread_cond_signal(&(matches[i].cond));
 			break;
@@ -65,7 +65,7 @@ void *white_player_thread(void *arg){
 
 		matches[i].turn = 1;
 		pthread_cond_signal(&(matches[i].cond));
-		sprintf(buffer,"Opponents turn\n");
+		sprintf(buffer,"Opponent's turn\n");
 		write(matches[i].board.white.connfd,buffer,sizeof(buffer));
 	}
 	write(matches[i].board.white.connfd,buffer,sizeof(buffer));
@@ -73,7 +73,7 @@ void *white_player_thread(void *arg){
 
 	return NULL;
 }
-/*
+
 void *black_player_thread(void *arg){
 	long i = (long)arg;
 	long bytes_read;
@@ -81,7 +81,7 @@ void *black_player_thread(void *arg){
 	int return_value;
 
 	write(matches[i].board.black.connfd,matches[i].board.white.username,strlen(matches[i].board.white.username)); 
-	write(matches[i].board.black.connfd,&(matches[i].board),sizeof(matches[i].board));
+	write(matches[i].board.black.connfd,&(matches[i].board),BOARD_T_SIZE);
 
 	while(1){ 
 		pthread_mutex_lock(&(matches[i].mutex));
@@ -92,7 +92,7 @@ void *black_player_thread(void *arg){
 		bytes_read = read(matches[i].board.black.connfd,buffer,sizeof(buffer)-1);
 		buffer[bytes_read]='\0';
 
-		while((return_value = chess_main(matches[i].board,1,buffer)) == 0){
+		while((return_value = chess_main(&(matches[i].board),1,buffer)) == 0){
 			sprintf(buffer,"Invalid move, enter another move\n");
 			write(matches[i].board.black.connfd,buffer,sizeof(buffer));
 			bytes_read = read(matches[i].board.black.connfd,buffer,sizeof(buffer)-1);
@@ -100,22 +100,27 @@ void *black_player_thread(void *arg){
 		}
 		if(return_value == 3){
 			sprintf(buffer,"You win!\n");
+			matches[i].turn = 0;
+			pthread_cond_signal(&(matches[i].cond));
 			break;
 		}
 		else if(return_value == 2){
-			sprintf(buffer,"You lose :(\n");
+			sprintf(buffer,"You lose.\n");
+			matches[i].turn = 0;
+			pthread_cond_signal(&(matches[i].cond));			
 			break;
 		}
 
 		matches[i].turn = 0;
-		sprintf(buffer,"Opponents turn\n");
+		pthread_cond_signal(&(matches[i].cond));
+		sprintf(buffer,"Opponent's turn\n");
 		write(matches[i].board.black.connfd,buffer,sizeof(buffer));
 
 	}
-	write(matches[i].board.white.connfd,buffer,sizeof(buffer));
+	write(matches[i].board.black.connfd,buffer,sizeof(buffer));
 
 	return NULL;
-} */
+} 
 
 void init_player(player_t *p,int color){
 	p->can_castle_long = 1;
@@ -217,16 +222,11 @@ int main(){
 				perror("create thread");
 				exit(1);
 			}
-//			if(pthread_create(&thread_handle,&attr,black_player_thread,(void*)i) != 0){
-//				perror("create thread");
-//				exit(1);
-//			}
-
+			if(pthread_create(&thread_handle,&attr,black_player_thread,(void*)i) != 0){
+				perror("create thread");
+				exit(1);
+			}
 		}
-
-//		i++;
-//		if(i == MAX_MATCHES)
-//			i = 0;
 	}
 
 	pthread_attr_destroy(&attr);

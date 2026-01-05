@@ -6,21 +6,20 @@
 #include <netinet/in.h>
 #include <stdlib.h>
 #include <arpa/inet.h>
-#include "chess_logic.h"
+#include "ui.h"
 
 #define BOARD_T_SIZE 1168
 
 board_t binary_to_board_t(char buffer[]);
 
-void run_ui(board_t b);
-
 
 int main(){
-	int sockfd;
+	int sockfd,first_iteration=1;
 	struct sockaddr_in server; 
-	char username[50],buffer[BOARD_T_SIZE + 1];
+	char ch,username[50],buffer[BOARD_T_SIZE + 2];
 	long bytes_read;
 	board_t b;
+	MOVE_T move;
 
 	if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0)  
 	{
@@ -31,7 +30,7 @@ int main(){
 	memset(&server, 0, sizeof(server)); 
 	server.sin_family = AF_INET;		
 	server.sin_addr.s_addr = inet_addr("127.0.0.1");
-	server.sin_port = htons(4556); 
+	server.sin_port = htons(4555); 
 	
 	printf("Type your username: ");
 	fgets(username,49,stdin);
@@ -47,18 +46,47 @@ int main(){
 	bytes_read = read(sockfd,buffer,sizeof(buffer));
 	buffer[bytes_read] = '\0';
 	printf("Congrats you are playing chess against %s\n",buffer);
+	
 	while(1){
-		bytes_read = read(sockfd,buffer,sizeof(buffer));
+		bytes_read = read(sockfd,buffer,sizeof(buffer)-1);	
 		buffer[bytes_read] = '\0';
-		if(strcmp(buffer,"game over") == 0 || bytes_read == 0)
-			break;		
-//		b = binary_to_board_t(buffer);
-//		run_ui(b);
-//		scanf(move);
-//		write(move);
+		b = binary_to_board_t(buffer);
+		
+		if(first_iteration){
+			init_ui(b);
+			first_iteration = 0; // needs change for black player
+		}
+
+		ch = getch();
+		move.move_made = 0;
+
+		do{
+			move = ui_return_move(ch, b);
+		}while(move.move_made == 0);
+
+		write(sockfd,&move,sizeof(move));
+		bytes_read = read(sockfd,buffer,sizeof(buffer)-1);	
+		buffer[bytes_read] = '\0';
+
+		
+
+		if(strcmp(buffer,"Invalid move, enter another move\n") == 0){
+			ui_render_move(move,b,0);
+			printf("%s",buffer);
+			continue;
+		}
+		else if (strcmp(buffer,"Opponent's turn\n") == 0){
+			ui_render_move(move,b,1);
+			printf("%s",buffer);
+		}
+		else if(strcmp(buffer,"You win!\n") == 0 || strcmp(buffer,"You lose.\n") == 0 || bytes_read == 0){
+			break;
+		}
+
 	}
-	
-	
+	printf("%s",buffer);
+
+	endwin();
 	close(sockfd);
 	return 0;
 }
