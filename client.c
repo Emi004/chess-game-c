@@ -7,16 +7,25 @@
 #include <stdlib.h>
 #include <arpa/inet.h>
 #include "ui.h"
+#include "chess_logic.h"
 
 #define BOARD_T_SIZE 1168
 
-board_t binary_to_board_t(char buffer[]);
+board_t binary_to_board_t(char buffer[]){
+	board_t aux;
+	player_t white;
+	player_t black;
+	aux = init_board(aux,white,black);
+
+	return aux;
+}
 
 
 int main(){
-	int sockfd,first_iteration=1;
+	int sockfd;
 	struct sockaddr_in server; 
 	char ch,username[50],buffer[BOARD_T_SIZE + 2];
+	char *end_of_username;
 	long bytes_read;
 	board_t b;
 	MOVE_T move;
@@ -45,24 +54,27 @@ int main(){
 	printf("Connected to the server\n");
 	bytes_read = read(sockfd,buffer,sizeof(buffer));
 	buffer[bytes_read] = '\0';
+	end_of_username = strchr(buffer,'\n');
+	*end_of_username = '\0';
 	printf("Congrats you are playing chess against %s\n",buffer);
-	
-	while(1){
-		bytes_read = read(sockfd,buffer,sizeof(buffer)-1);	
-		buffer[bytes_read] = '\0';
-		b = binary_to_board_t(buffer);
-		
-		if(first_iteration){
-			init_ui(b);
-			first_iteration = 0; // needs change for black player
-		}
+	memcpy(&b,end_of_username+1,1024);
+	init_ui(b);
 
-		ch = getch();
+	while(1){
+//		bytes_read = read(sockfd,buffer,sizeof(buffer)-1);	
+//		buffer[bytes_read] = '\0';
+//		printf("%ld\n",bytes_read);
+//		printf("%s\n",buffer);
+//		printf("am printat\n");		
+//		exit(1);
+				
 		move.move_made = 0;
 
 		do{
+			ch = getch();
 			move = ui_return_move(ch, b);
 		}while(move.move_made == 0);
+//printf("here\n");
 
 		write(sockfd,&move,sizeof(move));
 		bytes_read = read(sockfd,buffer,sizeof(buffer)-1);	

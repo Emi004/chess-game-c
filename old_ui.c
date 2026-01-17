@@ -4,10 +4,13 @@
 #include <locale.h>
 #include <string.h>
 #include <unistd.h>
-#include "ui.h"
+
+
+#include "old_ui.h"
 #include "chess_logic.h"
 
-WINDOW *win; 
+int move_succesfull;
+
 
 const char *map_to_unicode(char piece, int color) {
     static char buf[16] = {0};
@@ -67,7 +70,8 @@ void init_colors() {
     init_pair(COLOR_PAIR_HIGHLIGHT_RED_WHITE, COLOR_WHITE, COLOR_RED);
 }
 
-void draw_square(int row, int col, board_t board, int color_pair, int foreground_color_w, int foreground_color_b) {
+void draw_square(WINDOW *win, int row, int col, board_t *board, int color_pair, int foreground_color_w,
+                 int foreground_color_b) {
     int win_width, win_height;
     getmaxyx(win, win_height, win_width);
     int board_start_x = (win_width - TABLE_WIDTH) / 2;
@@ -79,8 +83,8 @@ void draw_square(int row, int col, board_t board, int color_pair, int foreground
         mvwhline(win, y + i, x, ' ', SQUARE_WIDTH);
     }
     wattroff(win, COLOR_PAIR(color_pair));
-    if (board.board[row][col].color != -1) {
-        switch (board.board[row][col].color) {
+    if (board->board[row][col].color != -1) {
+        switch (board->board[row][col].color) {
             case 0:
                 wattron(win, COLOR_PAIR(foreground_color_w)|A_BOLD);
                 break;
@@ -88,14 +92,14 @@ void draw_square(int row, int col, board_t board, int color_pair, int foreground
                 wattron(win, COLOR_PAIR(foreground_color_b)|A_BOLD);
                 break;
         }
-        const char *uni = map_to_unicode(board.board[row][col].type, board.board[row][col].color);
+        const char *uni = map_to_unicode(board->board[row][col].type, board->board[row][col].color);
         mvwaddstr(win, y+LABEL_OFFSET_Y, x+LABEL_OFFSET_X, uni);
         wattroff(win, COLOR_PAIR(foreground_color_w)|COLOR_PAIR(foreground_color_b)| A_BOLD);
     }
     wrefresh(win);
 }
 
-void render_board(board_t board) {
+void render_board(WINDOW *win, board_t board) {
     int win_width, win_height;
     getmaxyx(win, win_height, win_width);
     int board_start_x = (win_width - TABLE_WIDTH) / 2;
@@ -160,7 +164,7 @@ void render_board(board_t board) {
     wrefresh(win);
 }
 
-MOVE_T ui_return_move(int ch, board_t board) {
+MOVE_T ui_return_move(int ch, WINDOW *win, board_t *board) {
     static int toggle_to_move_square = 0;
     static int from_x, from_y;
 
@@ -183,10 +187,10 @@ MOVE_T ui_return_move(int ch, board_t board) {
             int row = (event.y - board_start_y) / SQUARE_HEIGHT;
 
             if (toggle_to_move_square == 0) {
-                if (board.board[row][col].color != -1) {
+                if (board->board[row][col].color != -1) {
                     from_x = col;
                     from_y = row;
-                    draw_square(row, col, board,
+                    draw_square(win, row, col, board,
                                 COLOR_PAIR_HIGHLIGHT, COLOR_PAIR_HIGHLIGHT_WHITE,
                                 COLOR_PAIR_HIGHLIGHT_BLACK);
                     toggle_to_move_square = 1;
@@ -205,7 +209,7 @@ MOVE_T ui_return_move(int ch, board_t board) {
     return move;
 }
 
-void ui_render_move(MOVE_T move, board_t board, int move_succesfull) {
+void ui_render_move(MOVE_T move, WINDOW *win, board_t *board) {
     if (move.move_made) {
         int from_x = move.from_x;
         int from_y = move.from_y;
@@ -213,13 +217,13 @@ void ui_render_move(MOVE_T move, board_t board, int move_succesfull) {
         int to_y = move.to_y;
 
         if (move_succesfull == 0) {
-            draw_square(to_y, to_x, board,
+            draw_square(win, to_y, to_x, board,
                         COLOR_PAIR_HIGHLIGHT_RED, COLOR_PAIR_HIGHLIGHT_RED_WHITE,
                         COLOR_PAIR_HIGHLIGHT_RED_BLACK);
             sleep(1);
         }
 
-        draw_square(to_y, to_x, board,
+        draw_square(win, to_y, to_x, board,
                     (to_x + to_y) % 2 == 0
                         ? COLOR_PAIR_LIGHT
                         : COLOR_PAIR_DARK,
@@ -229,7 +233,7 @@ void ui_render_move(MOVE_T move, board_t board, int move_succesfull) {
                     (to_x + to_y) % 2 == 0
                         ? COLOR_PAIR_BLACK_LIGHT
                         : COLOR_PAIR_BLACK_DARK);
-        draw_square(from_y, from_x, board,
+        draw_square(win, from_y, from_x, board,
                     (from_x + from_y) % 2 == 0
                         ? COLOR_PAIR_LIGHT
                         : COLOR_PAIR_DARK,
@@ -243,7 +247,14 @@ void ui_render_move(MOVE_T move, board_t board, int move_succesfull) {
     wrefresh(win);
 }
 
-void init_ui(board_t board) {
+int main(void) {
+    int ch;
+
+    board_t board;
+    player_t white = {1, 1, 0, 0};
+    player_t black = {1, 1, 1, 0};
+    board = init_board(board, white, black);
+    board.board[3][1] = (piece_t){0, 'k', 1, 3};
     setlocale(LC_ALL, "");
     initscr();
     cbreak();
@@ -259,7 +270,7 @@ void init_ui(board_t board) {
         printf("Terminal too small! Minimum size required: %d rows x %d cols\n",
                MIN_ROWS, MIN_COLS);
         printf("Current size: %d rows x %d cols\n", term_rows, term_cols);
-        return ;
+        return 1;
     }
 
     mousemask(ALL_MOUSE_EVENTS, NULL);
@@ -287,10 +298,20 @@ void init_ui(board_t board) {
     // move(1,0);
     // printw("%d %d",startx,starty);
 
-    win = newwin(win_height, win_width, starty, startx);
-    box(win, 0, 0);
-    wrefresh(win);
+    WINDOW *square = newwin(win_height, win_width, starty, startx);
+    box(square, 0, 0);
+    wrefresh(square);
     set_escdelay(0);
+    render_board(square, board);
+    while ((ch = getch()) != 27) {
 
-    render_board(board);
+        MOVE_T move=ui_return_move(ch, square, &board);
+        if (move.move_made) {
+            move_succesfull = rand()%2;
+            // printf("Move made from (%d, %d) to (%d, %d) move succesfull (%d)\n", move.from_x, move.from_y, move.to_x, move.to_y, move_succesfull);
+            ui_render_move(move, square, &board);
+        }
+    }
+    endwin();
+    return 0;
 }
