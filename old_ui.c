@@ -7,10 +7,38 @@
 
 
 #include "old_ui.h"
-#include "chess_logic.h"
+//#include "chess_logic.h"
 
 int move_succesfull;
 
+piece_t get_piece(int color, char type, int row, int col){
+    piece_t p;
+    p.color = color; // 0 = white, 1 = black, -1 = empty
+    p.type  = type; // . = empty
+    p.row   = row;
+    p.col   = col;
+    return p;
+}
+
+board_t init_board(board_t b, player_t white, player_t black){
+    b.white = white;
+    b.black = black;
+    for(int i = 2; i < 6; i++){
+        for(int j = 0; j < BOARD_SIZE; j++){
+            b.board[i][j] = get_piece(-1, '.', i, j);
+        }
+    }
+    for(int i = 0; i < BOARD_SIZE; i++){
+        b.board[1][i] = get_piece(1, 'p', 1, i);
+        b.board[6][i] = get_piece(0, 'p', 6, i);
+    }
+    char pieces[8] = {'r', 'n', 'b', 'q', 'k', 'b', 'n', 'r'};
+     for(int i = 0; i < BOARD_SIZE; i++){
+        b.board[0][i] = get_piece(1, pieces[i], 0, i);
+        b.board[7][i] = get_piece(0,pieces[i],7,i);
+    }
+    return b;
+}
 
 const char *map_to_unicode(char piece, int color) {
     static char buf[16] = {0};
@@ -185,8 +213,9 @@ MOVE_T ui_return_move(int ch, WINDOW *win, board_t *board) {
         if (event.x >= board_start_x && event.x < board_end_x && event.y >= board_start_y && event.y < board_end_y) {
             int col = (event.x - board_start_x) / SQUARE_WIDTH;
             int row = (event.y - board_start_y) / SQUARE_HEIGHT;
-
+            
             if (toggle_to_move_square == 0) {
+                printf("aici odata\n");
                 if (board->board[row][col].color != -1) {
                     from_x = col;
                     from_y = row;
@@ -196,6 +225,7 @@ MOVE_T ui_return_move(int ch, WINDOW *win, board_t *board) {
                     toggle_to_move_square = 1;
                 }
             } else {
+                printf("si aici altadata\n");
                 move.from_x = from_x;
                 move.from_y = from_y;
                 move.to_x = col;

@@ -7,25 +7,17 @@
 #include <stdlib.h>
 #include <arpa/inet.h>
 #include "ui.h"
-#include "chess_logic.h"
 
 #define BOARD_T_SIZE 1168
-
-board_t binary_to_board_t(char buffer[]){
-	board_t aux;
-	player_t white;
-	player_t black;
-	aux = init_board(aux,white,black);
-
-	return aux;
-}
-
+#define BOARD_BYTES 1024
+#define BOARD_AND_MOVE_BYTES 1029
 
 int main(){
-	int sockfd;
+	int sockfd,first_turn = 1,invalid_move = 0;
 	struct sockaddr_in server; 
-	char ch,username[50],buffer[BOARD_T_SIZE + 2];
+	char username[50],buffer[BOARD_T_SIZE + 2];
 	char *end_of_username;
+	char turn;
 	long bytes_read;
 	board_t b;
 	MOVE_T move;
@@ -39,7 +31,7 @@ int main(){
 	memset(&server, 0, sizeof(server)); 
 	server.sin_family = AF_INET;		
 	server.sin_addr.s_addr = inet_addr("127.0.0.1");
-	server.sin_port = htons(4555); 
+	server.sin_port = htons(4556); 
 	
 	printf("Type your username: ");
 	fgets(username,49,stdin);
@@ -54,47 +46,58 @@ int main(){
 	printf("Connected to the server\n");
 	bytes_read = read(sockfd,buffer,sizeof(buffer));
 	buffer[bytes_read] = '\0';
+	turn = buffer[0];
 	end_of_username = strchr(buffer,'\n');
 	*end_of_username = '\0';
-	printf("Congrats you are playing chess against %s\n",buffer);
-	memcpy(&b,end_of_username+1,1024);
+	printf("Congrats you are playing chess against %s\n",buffer+1);
+	memcpy(&b,end_of_username+1,BOARD_BYTES);
 	init_ui(b);
 
 	while(1){
-//		bytes_read = read(sockfd,buffer,sizeof(buffer)-1);	
-//		buffer[bytes_read] = '\0';
-//		printf("%ld\n",bytes_read);
-//		printf("%s\n",buffer);
-//		printf("am printat\n");		
-//		exit(1);
-				
+		if((turn == '1' || first_turn == 0) && invalid_move == 0){
+			bytes_read = read(sockfd,buffer,BOARD_AND_MOVE_BYTES);
+			move.from_x = buffer[0] - 97;
+			move.from_y = 56 - buffer[1];
+			move.to_x = buffer[2] - 97;
+			move.to_y = 56 - buffer[3];
+			move.move_made = 1;
+			memcpy(&b,buffer+5,BOARD_BYTES);
+			ui_render_move(move,b,1);
+//			printf("first turn ove\n");
+		}
+		invalid_move = 0;
 		move.move_made = 0;
-
 		do{
-			ch = getch();
-			move = ui_return_move(ch, b);
+			getch();
+			move = ui_return_move(b);
 		}while(move.move_made == 0);
-//printf("here\n");
 
-		write(sockfd,&move,sizeof(move));
+		buffer[0] = move.from_x + 97;
+		buffer[1] = 56 - move.from_y;
+		buffer[2] = move.to_x + 97;
+		buffer[3] = 56 - move.to_y;
+		buffer[4] = '\0';
+//		printf("%s\n",buffer);
+
+		write(sockfd,buffer,5);
 		bytes_read = read(sockfd,buffer,sizeof(buffer)-1);	
-		buffer[bytes_read] = '\0';
-
-		
-
-		if(strcmp(buffer,"Invalid move, enter another move\n") == 0){
+//		buffer[bytes_read] = '\0';
+		if(bytes_read == BOARD_BYTES){
+			memcpy(&b,buffer,BOARD_BYTES);
+			ui_render_move(move,b,1);
+//			printf("Opponent's turn\n");
+		}
+		else if(strcmp(buffer,"Invalid move, enter another move\n") == 0){
 			ui_render_move(move,b,0);
 			printf("%s",buffer);
+			invalid_move = 1;
+
 			continue;
-		}
-		else if (strcmp(buffer,"Opponent's turn\n") == 0){
-			ui_render_move(move,b,1);
-			printf("%s",buffer);
 		}
 		else if(strcmp(buffer,"You win!\n") == 0 || strcmp(buffer,"You lose.\n") == 0 || bytes_read == 0){
 			break;
 		}
-
+		first_turn = 0;
 	}
 	printf("%s",buffer);
 

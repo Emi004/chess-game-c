@@ -12,6 +12,8 @@
 #define BACKLOG 10
 #define MAX_MATCHES 20
 #define BOARD_T_SIZE 1168
+#define BOARD_BYTES 1024
+#define BOARD_AND_MOVE_BYTES 1029
 //to do on close signal destroy al mutexes and cond variables
 
 
@@ -20,7 +22,8 @@ typedef struct{
 	int turn;  				//0 white turn, 1 black turn
 	pthread_mutex_t mutex;	
 	pthread_cond_t cond;	
-	board_t board;			
+	board_t board;
+	char last_move[5];			
 }match_t;
 
 match_t matches[MAX_MATCHES];
@@ -29,27 +32,41 @@ match_t matches[MAX_MATCHES];
 void *white_player_thread(void *arg){
 	long i = (long)arg;
 	long bytes_read;
-	char buffer[BOARD_T_SIZE+1];
-	int return_value;
+	char buffer[BOARD_T_SIZE+1] = "0";
+	int return_value, first_turn = 1;
 
-	write(matches[i].board.white.connfd,matches[i].board.black.username,strlen(matches[i].board.black.username)); 
-	write(matches[i].board.white.connfd,&(matches[i].board),BOARD_T_SIZE); //nvm i might be cooking actually
+	memcpy(buffer+1,matches[i].board.black.username,strlen(matches[i].board.black.username));
+	memcpy(buffer+strlen(matches[i].board.black.username)+1,&(matches[i].board),BOARD_BYTES);
+	write(matches[i].board.white.connfd,buffer,strlen(matches[i].board.black.username) + BOARD_BYTES + 1);
 
 	while(1){ 
 		pthread_mutex_lock(&(matches[i].mutex));
 		while(matches[i].turn != 0)
-			pthread_cond_wait(&(matches[i].cond),&(matches[i].mutex));	
+			if(pthread_cond_wait(&(matches[i].cond),&(matches[i].mutex)) !=0){
+				printf("my fucking conditional variable\n");
+			}	
 		pthread_mutex_unlock(&(matches[i].mutex));
-		
-		bytes_read = read(matches[i].board.white.connfd,buffer,sizeof(buffer)-1); 
-		buffer[bytes_read]='\0'; //needs to read the move properly
+//		printf("white power on\n");
+//		fflush(stdout);
+		if(!first_turn){
+//			printf("first turn over\n");
+			strcpy(buffer,matches[i].last_move);
+			memcpy(buffer+5,&(matches[i].board),BOARD_BYTES);
+			write(matches[i].board.white.connfd,buffer,BOARD_AND_MOVE_BYTES);
+		}
 
+		bytes_read = read(matches[i].board.white.connfd,buffer,sizeof(buffer)-1); 
+		printf("%ld %s\n",bytes_read,buffer);
 		while((return_value = chess_main(&(matches[i].board),0,buffer)) == 0){ //return 0 for invalid move, 1 for valid move, 2 for white checkmate, 3 for black chekmate
 			sprintf(buffer,"Invalid move, enter another move\n");
-			write(matches[i].board.white.connfd,buffer,sizeof(buffer));
-			bytes_read = read(matches[i].board.white.connfd,buffer,sizeof(buffer)-1);
-			buffer[bytes_read]='\0';
+			printf("why are we here white twin\n");
+			fflush(stdout);
+			write(matches[i].board.white.connfd,buffer,35);
+			read(matches[i].board.white.connfd,buffer,sizeof(buffer)-1);
+			printf("%d %s\n",return_value,buffer);
+			fflush(stdout);
 		}
+		strcpy(matches[i].last_move,buffer);
 		if(return_value == 2){
 			sprintf(buffer,"You win!\n");
 			matches[i].turn = 1;
@@ -62,11 +79,13 @@ void *white_player_thread(void *arg){
 			pthread_cond_signal(&(matches[i].cond));
 			break;
 		}
-
+		first_turn = 0;
 		matches[i].turn = 1;
 		pthread_cond_signal(&(matches[i].cond));
-		sprintf(buffer,"Opponent's turn\n");
-		write(matches[i].board.white.connfd,buffer,sizeof(buffer));
+//		sprintf(buffer,"Opponent's turn\n");
+		memcpy(buffer,&(matches[i].board),BOARD_BYTES);
+		write(matches[i].board.white.connfd,buffer,BOARD_BYTES);
+		print_board(&(matches[i].board));
 	}
 	write(matches[i].board.white.connfd,buffer,sizeof(buffer));
 	matches[i].players = 0;
@@ -76,28 +95,41 @@ void *white_player_thread(void *arg){
 
 void *black_player_thread(void *arg){
 	long i = (long)arg;
-	long bytes_read;
-	char buffer[BOARD_T_SIZE+1];
+//	long bytes_read;
+	char buffer[BOARD_T_SIZE+1] = "1";
 	int return_value;
 
-	write(matches[i].board.black.connfd,matches[i].board.white.username,strlen(matches[i].board.white.username)); 
-	write(matches[i].board.black.connfd,&(matches[i].board),BOARD_T_SIZE);
+
+	memcpy(buffer+1,matches[i].board.white.username,strlen(matches[i].board.white.username));
+	memcpy(buffer+strlen(matches[i].board.white.username)+1,&(matches[i].board),BOARD_BYTES);
+	write(matches[i].board.black.connfd,buffer,strlen(matches[i].board.white.username) + BOARD_BYTES + 1);
 
 	while(1){ 
 		pthread_mutex_lock(&(matches[i].mutex));
 		while(matches[i].turn != 1)
-			pthread_cond_wait(&(matches[i].cond),&(matches[i].mutex));
+			if(pthread_cond_wait(&(matches[i].cond),&(matches[i].mutex)) !=0){
+				printf("my fucking conditional variable\n");
+			}	
 		pthread_mutex_unlock(&(matches[i].mutex));
+//		printf("black power on\n");
+//		fflush(stdout);
 
-		bytes_read = read(matches[i].board.black.connfd,buffer,sizeof(buffer)-1);
-		buffer[bytes_read]='\0';
+		strcpy(buffer,matches[i].last_move);
+		memcpy(buffer+5,&(matches[i].board),BOARD_BYTES);
+		write(matches[i].board.black.connfd,buffer,BOARD_AND_MOVE_BYTES);
+
+		read(matches[i].board.black.connfd,buffer,sizeof(buffer)-1);
 
 		while((return_value = chess_main(&(matches[i].board),1,buffer)) == 0){
 			sprintf(buffer,"Invalid move, enter another move\n");
-			write(matches[i].board.black.connfd,buffer,sizeof(buffer));
-			bytes_read = read(matches[i].board.black.connfd,buffer,sizeof(buffer)-1);
-			buffer[bytes_read]='\0';
+			printf("why are we here black twin\n");
+			fflush(stdout);
+			write(matches[i].board.black.connfd,buffer,5);
+			read(matches[i].board.black.connfd,buffer,sizeof(buffer)-1);
+			printf("%d %s\n",return_value,buffer);
+			fflush(stdout);
 		}
+		strcpy(matches[i].last_move,buffer);
 		if(return_value == 3){
 			sprintf(buffer,"You win!\n");
 			matches[i].turn = 0;
@@ -113,9 +145,10 @@ void *black_player_thread(void *arg){
 
 		matches[i].turn = 0;
 		pthread_cond_signal(&(matches[i].cond));
-		sprintf(buffer,"Opponent's turn\n");
-		write(matches[i].board.black.connfd,buffer,sizeof(buffer));
-
+		//sprintf(buffer,"Opponent's turn\n");
+		memcpy(buffer,&(matches[i].board),BOARD_BYTES);
+		write(matches[i].board.black.connfd,buffer,BOARD_BYTES);
+		print_board(&(matches[i].board));
 	}
 	write(matches[i].board.black.connfd,buffer,sizeof(buffer));
 
@@ -169,7 +202,7 @@ int main(){
 	memset(&server_bind, 0, sizeof(server_bind)); 
 	server_bind.sin_family = AF_INET; 
 	server_bind.sin_addr.s_addr = INADDR_ANY; 
-	server_bind.sin_port = htons(4555); 
+	server_bind.sin_port = htons(4556); 
 	if (bind(sockfd, (struct sockaddr *)&server_bind, sizeof(server_bind)) < 0) {
 		perror("bind");
 		exit(1);

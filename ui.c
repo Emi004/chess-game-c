@@ -5,7 +5,6 @@
 #include <string.h>
 #include <unistd.h>
 #include "ui.h"
-#include "chess_logic.h"
 
 WINDOW *win; 
 
@@ -14,22 +13,22 @@ const char *map_to_unicode(char piece, int color) {
 
     switch (piece) {
         case 'p':
-            strcpy(buf, color ? "\u265F" : "\u2659"); // ♟ : ♙
+            strcpy(buf, color ? "Pb" : "Pw"); //  \u265F   \u2659  ♟ : ♙
             break;
         case 'k':
-            strcpy(buf, color ? "\u265A" : "\u2654"); // ♚ : ♔
+            strcpy(buf, color ? "Kb" : "Kw"); // \u265A   \u2654     ♚ : ♔
             break;
         case 'n':
-            strcpy(buf, color ? "\u265E" : "\u2658"); // ♞ : ♘
+            strcpy(buf, color ? "Nb" : "Nw"); // \u265E  \u2658      ♞ : ♘
             break;
         case 'b':
-            strcpy(buf, color ? "\u265D" : "\u2657"); // ♝ : ♗
+            strcpy(buf, color ? "Bb" : "Bw"); //  \u265D  \u2657 ♝ : ♗
             break;
         case 'q':
-            strcpy(buf, color ? "\u265B" : "\u2655"); // ♛ : ♕
+            strcpy(buf, color ? "Qb" : "Qw"); // \u265B  \u2655 ♛ : ♕
             break;
         case 'r':
-            strcpy(buf, color ? "\u265C" : "\u2656"); // ♜ : ♖
+            strcpy(buf, color ? "Rb" : "Rw"); // \u265C   \u2656 ♜ : ♖
             break;
         default:
             strcpy(buf, "?");
@@ -160,7 +159,7 @@ void render_board(board_t board) {
     wrefresh(win);
 }
 
-MOVE_T ui_return_move(int ch, board_t board) {
+MOVE_T ui_return_move(board_t board) {
     static int toggle_to_move_square = 0;
     static int from_x, from_y;
 
@@ -177,20 +176,28 @@ MOVE_T ui_return_move(int ch, board_t board) {
     int board_end_x = board_start_x + TABLE_WIDTH;
     int board_end_y = board_start_y + TABLE_HEIGHT;
 
-    if (ch == KEY_MOUSE && getmouse(&event) == OK && (event.bstate & BUTTON1_PRESSED)) {
+//    if(ch == KEY_MOUSE)
+//        printf("1\n");
+//    if(getmouse(&event) == OK)
+//        printf("2\n");
+//    if(event.bstate & BUTTON1_PRESSED)
+//        printf("3\n");
+
+    if (getmouse(&event) == OK && (event.bstate & BUTTON1_PRESSED)) {
         if (event.x >= board_start_x && event.x < board_end_x && event.y >= board_start_y && event.y < board_end_y) {
             int col = (event.x - board_start_x) / SQUARE_WIDTH;
             int row = (event.y - board_start_y) / SQUARE_HEIGHT;
-
+            
             if (toggle_to_move_square == 0) {
-                if (board.board[row][col].color != -1) {
+                
+                //if (board.board[row][col].color != -1) {
                     from_x = col;
                     from_y = row;
                     draw_square(row, col, board,
                                 COLOR_PAIR_HIGHLIGHT, COLOR_PAIR_HIGHLIGHT_WHITE,
                                 COLOR_PAIR_HIGHLIGHT_BLACK);
                     toggle_to_move_square = 1;
-                }
+               // }
             } else {
                 move.from_x = from_x;
                 move.from_y = from_y;
@@ -206,7 +213,7 @@ MOVE_T ui_return_move(int ch, board_t board) {
 }
 
 void ui_render_move(MOVE_T move, board_t board, int move_succesfull) {
-    if (move.move_made) {
+ //   if (move.move_made) {
         int from_x = move.from_x;
         int from_y = move.from_y;
         int to_x = move.to_x;
@@ -239,7 +246,7 @@ void ui_render_move(MOVE_T move, board_t board, int move_succesfull) {
                     (from_x + from_y) % 2 == 0
                         ? COLOR_PAIR_BLACK_LIGHT
                         : COLOR_PAIR_BLACK_DARK);
-    }
+//    }
     wrefresh(win);
 }
 

@@ -1230,10 +1230,6 @@ int check_for_checkmate(board_t *b, int player_color, char *checking_direction, 
     return 0;
 }
 
-void attempt_castle(board_t *b, int player_color){
-    //short/long castle logic
-
-}
 
 int chess_main(board_t *b, int turn, char input[]){ //return 0 for invalid move, 1 for valid move, 2 for white checkmate, 3 for black chekmate
     char from_col, to_col;
@@ -1242,7 +1238,8 @@ int chess_main(board_t *b, int turn, char input[]){ //return 0 for invalid move,
     char checking_direction;
     square_t checking_piece = {-1,-1};
 
-    if(sscanf(input, "%c%d %c%d", &from_col, &from_row, &to_col, &to_row) == 4){
+    if(sscanf(input, "%c%d%c%d", &from_col, &from_row, &to_col, &to_row) == 4){
+ //       printf("%c%d%c%d\n",from_col, from_row, to_col, to_row);
         if( turn == 0 ){
             validate_move(b, b->white, from_col, from_row, to_col, to_row,&move_succesfull,&checking_direction,&checking_piece);
             

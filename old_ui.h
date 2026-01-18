@@ -2,7 +2,7 @@
 #define CHESS_UI_H
 
 #include <ncurses.h>
-#include "chess_logic.h"
+//#include "chess_logic.h"
 
 
 #define SQUARE_HEIGHT 3
@@ -26,6 +26,27 @@
 #define RESET "\x1b[0m"
 
 
+typedef struct {
+    int color;
+    char type;
+    int row;
+    int col;
+} piece_t;
+
+typedef struct {
+    int can_castle_short; // O-O
+    int can_castle_long; // O-O-O
+    int color;
+    int is_in_check;
+    char username[50];
+	int connfd;
+}player_t;
+
+typedef struct {
+    piece_t board[BOARD_SIZE][BOARD_SIZE];
+    player_t white;
+    player_t black;
+}board_t;
 
 typedef struct {
     int from_x, from_y, to_x, to_y,move_made;

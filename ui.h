@@ -20,8 +20,8 @@
 #define BOARD_SIZE 8
 #define BLUE "\x1b[34m"
 #define RESET "\x1b[0m"
-#include "chess_logic.h"
-/*
+
+
 typedef struct {
     int color;
     char type;
@@ -43,7 +43,7 @@ typedef struct {
     player_t white;
     player_t black;
 }board_t;
-*/
+
 typedef struct {
     int from_x, from_y;
     int to_x, to_y;
@@ -90,7 +90,7 @@ void render_board(board_t board);
 /*
  * Handles mouse input and returns a MOVE_T when a move has been completed
  */
-MOVE_T ui_return_move(int ch,board_t board);
+MOVE_T ui_return_move(board_t board);
 
 /**
  * Renders a move on the board, including highlights for invalid moves
