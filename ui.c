@@ -190,14 +190,14 @@ MOVE_T ui_return_move(board_t board) {
             
             if (toggle_to_move_square == 0) {
                 
-                //if (board.board[row][col].color != -1) {
+                if (board.board[row][col].color != -1) {
                     from_x = col;
                     from_y = row;
                     draw_square(row, col, board,
                                 COLOR_PAIR_HIGHLIGHT, COLOR_PAIR_HIGHLIGHT_WHITE,
                                 COLOR_PAIR_HIGHLIGHT_BLACK);
                     toggle_to_move_square = 1;
-               // }
+                }
             } else {
                 move.from_x = from_x;
                 move.from_y = from_y;

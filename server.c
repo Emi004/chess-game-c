@@ -124,7 +124,7 @@ void *black_player_thread(void *arg){
 			sprintf(buffer,"Invalid move, enter another move\n");
 			printf("why are we here black twin\n");
 			fflush(stdout);
-			write(matches[i].board.black.connfd,buffer,5);
+			write(matches[i].board.black.connfd,buffer,35);
 			read(matches[i].board.black.connfd,buffer,sizeof(buffer)-1);
 			printf("%d %s\n",return_value,buffer);
 			fflush(stdout);
