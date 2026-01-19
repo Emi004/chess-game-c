@@ -15,6 +15,9 @@ const char *map_to_unicode(char piece, int color) {
         case 'p':
             strcpy(buf, color ? "\u265F" : "\u2659"); //  \u265F   \u2659  ♟ : ♙
             break;
+        case 'P':
+            strcpy(buf, color ? "\u265F" : "\u2659"); //  \u265F   \u2659  ♟ : ♙
+            break;
         case 'k':
             strcpy(buf, color ? "\u265A" : "\u2654"); // \u265A   \u2654     ♚ : ♔
             break;
@@ -29,6 +32,9 @@ const char *map_to_unicode(char piece, int color) {
             break;
         case 'r':
             strcpy(buf, color ? "\u265C" : "\u2656"); // \u265C   \u2656 ♜ : ♖
+            break;
+        case '.':
+            strcpy(buf, color ? "" : ""); //  \u265F   \u2659  ♟ : ♙
             break;
         default:
             strcpy(buf, "?");
