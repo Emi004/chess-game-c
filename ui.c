@@ -6,7 +6,7 @@
 #include <unistd.h>
 #include "ui.h"
 
-WINDOW *win; 
+WINDOW *win;
 
 const char *map_to_unicode(char piece, int color) {
     static char buf[16] = {0};
@@ -256,7 +256,7 @@ void ui_render_move(MOVE_T move, board_t board, int move_succesfull) {
     wrefresh(win);
 }
 
-void init_ui(board_t board) {
+void init_ui(board_t board, char* player_color) {
     setlocale(LC_ALL, "");
     initscr();
     cbreak();
@@ -283,8 +283,9 @@ void init_ui(board_t board) {
         init_colors();
     }
 
-    printw("Press ESC to exit");
-    refresh();
+    char color_label[64];
+    snprintf(color_label, sizeof(color_label), "You are playing as %s", player_color);
+
 
     int win_height = term_rows * WINDOW_SIZE;
     int win_width = term_cols * WINDOW_SIZE;
@@ -297,9 +298,10 @@ void init_ui(board_t board) {
     int starty = (term_rows - win_height) / 2;
     int startx = (term_cols - win_width) / 2;
 
-    // move(1,0);
-    // printw("%d %d",startx,starty);
 
+    move(starty - 1, startx + (win_width - strlen(color_label)) / 2);
+    printw(color_label);
+    refresh();
     win = newwin(win_height, win_width, starty, startx);
     box(win, 0, 0);
     wrefresh(win);

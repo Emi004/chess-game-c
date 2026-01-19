@@ -53,7 +53,7 @@ int main(){
 	*end_of_username = '\0';
 	printf("Congrats you are playing chess against %s\n",buffer+1);
 	memcpy(&b,end_of_username+1,BOARD_BYTES);
-	init_ui(b);
+	init_ui(b,"white"); // <-- to do: change color based on server info
 
 	while(1){
 
