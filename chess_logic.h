@@ -76,7 +76,7 @@ int is_valid_knight_move(int from_i, int from_j, int to_i, int to_j);          /
 int is_valid_bishop_move(board_t *b, int from_i, int from_j, int to_i, int to_j);
 int is_valid_king_move(board_t *b, int from_i, int from_j, int to_i, int to_j);
 int is_valid_pawn_move(int color, int from_i, int from_j, int to_i, int to_j);
-
+void if_castle_wrong_order(board_t *b, int* from_i, int* from_j, int* to_i, int* to_j); // calm luh helper
 int validate_move(board_t *b, player_t player, char from_col, int from_row, char to_col, int to_row, int *move_succesfull,char *checking_direction,square_t *checking_piece); // the first player_t argument named player is the acting player, the function takes a move in format "e2 e4", turns the move to matrix indexes, identifies what kind of piece is at that position and whether or not the player is able to make the move; sets move_succesfull and returns a move making function or the initial board state in case move_succesful is set to 0
 
 square_t get_king_position(board_t *b, int player_color);
