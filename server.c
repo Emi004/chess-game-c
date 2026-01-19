@@ -9,6 +9,8 @@
 #include <pthread.h>
 #include "chess_logic.h"
 
+#include <signal.h>
+
 #define BACKLOG 10
 #define MAX_MATCHES 20
 #define BOARD_T_SIZE 1168
@@ -67,8 +69,12 @@ void *white_player_thread(void *arg){
 			fflush(stdout);
 		}
 		strcpy(matches[i].last_move,buffer);
+		printf("%d\n", return_value);
+		fflush(stdout);
 		if(return_value == 2){
 			sprintf(buffer,"You win!\n");
+			printf("White won.\n");
+			fflush(stdout);
 			matches[i].turn = 1;
 			pthread_cond_signal(&(matches[i].cond));
 			break;
@@ -89,7 +95,7 @@ void *white_player_thread(void *arg){
 	}
 	write(matches[i].board.white.connfd,buffer,sizeof(buffer));
 	matches[i].players = 0;
-
+	//raise(SIGKILL);
 	return NULL;
 }
 
@@ -132,6 +138,8 @@ void *black_player_thread(void *arg){
 		strcpy(matches[i].last_move,buffer);
 		if(return_value == 3){
 			sprintf(buffer,"You win!\n");
+			printf("Black won.\n");
+			fflush(stdout);
 			matches[i].turn = 0;
 			pthread_cond_signal(&(matches[i].cond));
 			break;
@@ -152,6 +160,7 @@ void *black_player_thread(void *arg){
 	}
 	write(matches[i].board.black.connfd,buffer,sizeof(buffer));
 
+	//raise(SIGKILL); -prea brutal
 	return NULL;
 } 
 

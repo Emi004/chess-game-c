@@ -13,22 +13,22 @@ const char *map_to_unicode(char piece, int color) {
 
     switch (piece) {
         case 'p':
-            strcpy(buf, color ? "Pb" : "Pw"); //  \u265F   \u2659  ♟ : ♙
+            strcpy(buf, color ? "\u265F" : "\u2659"); //  \u265F   \u2659  ♟ : ♙
             break;
         case 'k':
-            strcpy(buf, color ? "Kb" : "Kw"); // \u265A   \u2654     ♚ : ♔
+            strcpy(buf, color ? "\u265A" : "\u2654"); // \u265A   \u2654     ♚ : ♔
             break;
         case 'n':
-            strcpy(buf, color ? "Nb" : "Nw"); // \u265E  \u2658      ♞ : ♘
+            strcpy(buf, color ? "\u265E" : "\u2658"); // \u265E  \u2658      ♞ : ♘
             break;
         case 'b':
-            strcpy(buf, color ? "Bb" : "Bw"); //  \u265D  \u2657 ♝ : ♗
+            strcpy(buf, color ? "\u265D" : "\u2657"); //  \u265D  \u2657 ♝ : ♗
             break;
         case 'q':
-            strcpy(buf, color ? "Qb" : "Qw"); // \u265B  \u2655 ♛ : ♕
+            strcpy(buf, color ? "\u265B" : "\u2655"); // \u265B  \u2655 ♛ : ♕
             break;
         case 'r':
-            strcpy(buf, color ? "Rb" : "Rw"); // \u265C   \u2656 ♜ : ♖
+            strcpy(buf, color ? "\u265C" : "\u2656"); // \u265C   \u2656 ♜ : ♖
             break;
         default:
             strcpy(buf, "?");
@@ -40,7 +40,7 @@ const char *map_to_unicode(char piece, int color) {
 
 void init_colors() {
     init_color(COLOR_BROWN, 585, 300, 132);
-    init_color(COLOR_BEJ, 929, 859, 589);
+    init_color(COLOR_BEJ, 300, 300, 300);
     init_color(COLOR_GREY, 500, 500, 500);
     //black pieces
     init_pair(COLOR_PAIR_BLACK_LIGHT, COLOR_GREY, COLOR_BEJ);

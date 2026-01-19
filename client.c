@@ -7,12 +7,14 @@
 #include <stdlib.h>
 #include <arpa/inet.h>
 #include "ui.h"
+#include <locale.h>
 
 #define BOARD_T_SIZE 1168
 #define BOARD_BYTES 1024
 #define BOARD_AND_MOVE_BYTES 1029
 
 int main(){
+	setlocale(LC_ALL, "");
 	int sockfd,first_turn = 1,invalid_move = 0;
 	struct sockaddr_in server; 
 	char username[50],buffer[BOARD_T_SIZE + 2];
@@ -54,6 +56,7 @@ int main(){
 	init_ui(b);
 
 	while(1){
+
 		if((turn == '1' || first_turn == 0) && invalid_move == 0){
 			bytes_read = read(sockfd,buffer,BOARD_AND_MOVE_BYTES);
 			move.from_x = buffer[0] - 97;

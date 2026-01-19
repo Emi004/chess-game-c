@@ -369,7 +369,7 @@ int check_for_check(board_t *b, int player_to_be_checked, char *checking_directi
     return 0;
 }
 
-void make_move(board_t *b, char from_col, int from_row, char to_col, int to_row,int *move_succesfull, char *checking_direction, square_t *checking_piece){
+int make_move(board_t *b, char from_col, int from_row, char to_col, int to_row,int *move_succesfull, char *checking_direction, square_t *checking_piece){
 
     int from_i = (from_row - BOARD_SIZE) * -1;
     int from_j = char_to_index(from_col);
@@ -379,6 +379,7 @@ void make_move(board_t *b, char from_col, int from_row, char to_col, int to_row,
     int color = b->board[from_i][from_j].color;
     char ptype = b->board[from_i][from_j].type;
     piece_t aux = b->board[from_i][from_j];
+    
     b->board[from_i][from_j] = b->board[to_i][to_j];
     b->board[to_i][to_j] = aux; 
 
@@ -388,7 +389,7 @@ void make_move(board_t *b, char from_col, int from_row, char to_col, int to_row,
             b->board[to_i][to_j] = get_piece(-1, '.', to_i, to_j);
             b->board[from_i][from_j] = get_piece(color, ptype, from_i, from_j);
             *move_succesfull = 0;
-            return ;
+            return -1;
         }
         else {
             b->white.is_in_check = 0;
@@ -400,9 +401,9 @@ void make_move(board_t *b, char from_col, int from_row, char to_col, int to_row,
             DBG printf("DEBUG: checking piece at %d,%d dir=%s\n",
             checking_piece->row, checking_piece->col, checking_direction);
 
-            check_for_checkmate(b, 1 - color,checking_direction, checking_piece);
+            if(check_for_checkmate(b, 1 - color,checking_direction, checking_piece))return 1;
 
-            return ;
+            return 0;
         }
     }
     if(color == 1){
@@ -411,7 +412,7 @@ void make_move(board_t *b, char from_col, int from_row, char to_col, int to_row,
             b->board[to_i][to_j] = get_piece(-1, '.', to_i, to_j);
             b->board[from_i][from_j] = get_piece(color, ptype, from_i, from_j);
             *move_succesfull = 0;
-            return ;
+            return -1;
         }
         else{
             b->black.is_in_check = 0;
@@ -423,14 +424,15 @@ void make_move(board_t *b, char from_col, int from_row, char to_col, int to_row,
             DBG printf("DEBUG: checking piece at %d,%d dir=%s\n",
             checking_piece->row, checking_piece->col, checking_direction);
 
-            check_for_checkmate(b, 1 - color,checking_direction, checking_piece);
+            if(check_for_checkmate(b, 1 - color,checking_direction, checking_piece)) return 1;
 
-            return ;
+            return 0;
         }
     }
+    return 0;
 }
 
-void take_piece(board_t *b, char from_col, int from_row, char to_col, int to_row,int *move_succesfull, char *checking_direction, square_t *checking_piece){
+int take_piece(board_t *b, char from_col, int from_row, char to_col, int to_row,int *move_succesfull, char *checking_direction, square_t *checking_piece){
 
     int from_i = (from_row - BOARD_SIZE) * -1;
     int from_j = char_to_index(from_col);
@@ -446,14 +448,14 @@ void take_piece(board_t *b, char from_col, int from_row, char to_col, int to_row
     if( b->board[from_i][from_j].type == 'p' ){
         if( color == 0 ){
             if( to_i == 0 ){
-                promote(b, color, from_col, from_row, to_col, to_row,move_succesfull,checking_direction, checking_piece);
-                return ;
+                return promote(b, color, from_col, from_row, to_col, to_row,move_succesfull,checking_direction, checking_piece);
+                
             }
         }
         else{
             if( to_i == 7 ){
-                promote(b, color, from_col, from_row, to_col, to_row,move_succesfull,checking_direction, checking_piece);
-                return ;
+                return promote(b, color, from_col, from_row, to_col, to_row,move_succesfull,checking_direction, checking_piece);
+                
             }
         }
     }
@@ -469,7 +471,7 @@ void take_piece(board_t *b, char from_col, int from_row, char to_col, int to_row
             b->board[to_i][to_j] = get_piece(1 - color, bptype, to_i, to_j);
             b->board[from_i][from_j] = get_piece(color, aptype, from_i, from_j);
             *move_succesfull = 0;
-            return ;
+            return -1;
         }
         else {
             b->white.is_in_check = 0;
@@ -478,9 +480,9 @@ void take_piece(board_t *b, char from_col, int from_row, char to_col, int to_row
             DBG printf("black in check.\n");
             b->black.is_in_check = 1;
 
-            check_for_checkmate(b, 1 - color,checking_direction, checking_piece);
+            if(check_for_checkmate(b, 1 - color,checking_direction, checking_piece)) return 1;
 
-            return ;
+            return 0;
         }
     }
     if(color == 1){
@@ -489,7 +491,7 @@ void take_piece(board_t *b, char from_col, int from_row, char to_col, int to_row
             b->board[to_i][to_j] = get_piece(1 - color, bptype, to_i, to_j);
             b->board[from_i][from_j] = get_piece(color, aptype, from_i, from_j);
             *move_succesfull = 0;
-            return ;
+            return -1;
         }
         else {
             b->black.is_in_check = 0;
@@ -498,14 +500,16 @@ void take_piece(board_t *b, char from_col, int from_row, char to_col, int to_row
             DBG printf("white in check.\n");
             b->white.is_in_check = 1;
  
-            check_for_checkmate(b, 1 - color,checking_direction, checking_piece);
+            if(check_for_checkmate(b, 1 - color,checking_direction, checking_piece))return 1;
 
-            return ;
+            return 0;
         }
     }
+    DBG printf("literal impossible situation reached\n");
+    return -1;
 }
 
-void promote(board_t *b, int color, char from_col, int from_row, char to_col, int to_row,int *move_succesfull,char *checking_direction, square_t *checking_piece){
+int promote(board_t *b, int color, char from_col, int from_row, char to_col, int to_row,int *move_succesfull,char *checking_direction, square_t *checking_piece){
 
     int from_i = (from_row - BOARD_SIZE) * -1;
     int from_j = char_to_index(from_col);
@@ -521,7 +525,7 @@ void promote(board_t *b, int color, char from_col, int from_row, char to_col, in
             b->board[to_i][to_j] = get_piece(-1, '.', to_i, to_j);
             b->board[from_i][from_j] = get_piece(color, 'p', from_i, from_j);
             *move_succesfull = 0;
-            return ;
+            return -1;
         }
         else {
             b->white.is_in_check = 0;
@@ -530,9 +534,9 @@ void promote(board_t *b, int color, char from_col, int from_row, char to_col, in
             DBG printf("black in check.\n");
             b->black.is_in_check = 1;
 
-            check_for_checkmate(b, 1 - color,checking_direction, checking_piece);
+            if (check_for_checkmate(b, 1 - color,checking_direction, checking_piece)) return 1;
 
-            return ;
+            return 0;
         }
     }
     if(color == 1){
@@ -541,7 +545,7 @@ void promote(board_t *b, int color, char from_col, int from_row, char to_col, in
             b->board[to_i][to_j] = get_piece(-1, '.', to_i, to_j);
             b->board[from_i][from_j] = get_piece(color, 'p', from_i, from_j);
             *move_succesfull = 0;
-            return ;
+            return -1;
         }
         else {
             b->black.is_in_check = 0;
@@ -550,11 +554,13 @@ void promote(board_t *b, int color, char from_col, int from_row, char to_col, in
             DBG printf("white in check.\n");
             b->white.is_in_check = 1;
 
-            check_for_checkmate(b, 1 - color,checking_direction, checking_piece);
+            if(check_for_checkmate(b, 1 - color,checking_direction, checking_piece)) return 1;
 
-            return ;
+            return 0;
         }
     }
+    DBG printf("literal impossible situation reached\n");
+    return -1;
 }
 
 
@@ -682,7 +688,7 @@ int is_valid_pawn_move(int color, int from_i, int from_j, int to_i, int to_j){
     return 0;
 }
 
-void validate_move(board_t *b, player_t player, char from_col, int from_row, char to_col, int to_row, int *move_succesfull, char *checking_direction, square_t *checking_piece){
+int validate_move(board_t *b, player_t player, char from_col, int from_row, char to_col, int to_row, int *move_succesfull, char *checking_direction, square_t *checking_piece){
 
     int from_i = (from_row - BOARD_SIZE) * -1;
     int from_j = char_to_index(from_col);
@@ -692,7 +698,7 @@ void validate_move(board_t *b, player_t player, char from_col, int from_row, cha
     if(player.color != b->board[from_i][from_j].color){
         DBG printf("invalid move: cannot move adversary's piece\n");
         *move_succesfull = 0;
-        return ;
+        return -1;
     }
 
     if( (from_i < 0 || from_i > 7) ||
@@ -702,19 +708,19 @@ void validate_move(board_t *b, player_t player, char from_col, int from_row, cha
     ){
         DBG printf("invalid move: out of bounds\n");
         *move_succesfull = 0;
-        return ;
+        return -1;
     }
     if( from_i == to_i && from_j == to_j ){
         DBG printf("invalid move: not a move\n");
         *move_succesfull = 0;
-        return ;
+        return -1;
     }
 
     if(b->board[from_i][from_j].type == '.' || b->board[from_i][from_j].color == -1){
         print_piece(b->board[from_i][from_j]);
         DBG printf("invalid move\n");
         *move_succesfull = 0;
-        return ;
+        return -1;
     }
     else if(b->board[from_i][from_j].type == 'p'){
         if( b->board[from_i][from_j].color == 0 ){ // white pawn
@@ -724,20 +730,19 @@ void validate_move(board_t *b, player_t player, char from_col, int from_row, cha
                     || ((from_i - to_i == 2) && (from_i == 6)) ){
                         if( to_i == 0 ){
                             *move_succesfull = 1;
-                            promote(b, 0, from_col, from_row, to_col, to_row,move_succesfull,checking_direction, checking_piece);
-                            return ;
+                            return promote(b, 0, from_col, from_row, to_col, to_row,move_succesfull,checking_direction, checking_piece);
                         }
                         *move_succesfull = 1;
-                        make_move(b, from_col, from_row, to_col, to_row,move_succesfull,checking_direction, checking_piece);
-                        return ;
+                        return make_move(b, from_col, from_row, to_col, to_row,move_succesfull,checking_direction, checking_piece);
+                        
                     }
                 }
             }
             else if( ((to_j == from_j - 1) || (to_j == from_j + 1)) && (from_i - to_i == 1) ){ //taking a piece
                 if( b->board[to_i][to_j].color == 1 ){
                     *move_succesfull = 1;
-                    take_piece(b, from_col, from_row, to_col, to_row,move_succesfull,checking_direction, checking_piece);
-                    return ;
+                    return take_piece(b, from_col, from_row, to_col, to_row,move_succesfull,checking_direction, checking_piece);
+                    
                 }
             }
         }
@@ -748,20 +753,20 @@ void validate_move(board_t *b, player_t player, char from_col, int from_row, cha
                     || ((from_i - to_i == -2) && from_i == 1) ){
                         if( to_i == 7 ){
                             *move_succesfull = 1;
-                            promote(b, 1, from_col, from_row, to_col, to_row,move_succesfull,checking_direction, checking_piece);
-                            return ;
+                            return promote(b, 1, from_col, from_row, to_col, to_row,move_succesfull,checking_direction, checking_piece);
+                            
                         }
                         *move_succesfull = 1;
-                        make_move(b, from_col, from_row, to_col, to_row,move_succesfull,checking_direction, checking_piece);
-                        return ;
+                        return make_move(b, from_col, from_row, to_col, to_row,move_succesfull,checking_direction, checking_piece);
+                        
                     }
                 }
             }
             else if( ((to_j == from_j - 1) || (to_j == from_j + 1)) && (to_i - from_i == 1) ){ //taking a piece
                 if( b->board[to_i][to_j].color == 0 ){
                     *move_succesfull = 1;
-                    take_piece(b, from_col, from_row, to_col, to_row,move_succesfull,checking_direction, checking_piece);       
-                    return ;
+                    return take_piece(b, from_col, from_row, to_col, to_row,move_succesfull,checking_direction, checking_piece);       
+                    
                 }
             }
         }
@@ -778,54 +783,54 @@ void validate_move(board_t *b, player_t player, char from_col, int from_row, cha
 
             if( b->board[to_i][to_j].type == '.' ){
                 *move_succesfull = 1;
-                make_move(b, from_col, from_row, to_col, to_row,move_succesfull,checking_direction, checking_piece);
-                return ;
+                return make_move(b, from_col, from_row, to_col, to_row,move_succesfull,checking_direction, checking_piece);
+                
             }
             else if( b->board[to_i][to_j].color != player.color ){
                 *move_succesfull = 1;
-                take_piece(b, from_col, from_row, to_col, to_row,move_succesfull,checking_direction, checking_piece);
-                return ;
+                return take_piece(b, from_col, from_row, to_col, to_row,move_succesfull,checking_direction, checking_piece);
+                
             }
         }
         else {
             *move_succesfull = 0;
-            return ;
+            return -1;
         }
     }
     else if(b->board[from_i][from_j].type == 'n'){
         if( is_valid_knight_move(from_i, from_j, to_i, to_j) ){
             if( b->board[to_i][to_j].type == '.' ){
                 *move_succesfull = 1;
-                make_move(b, from_col, from_row, to_col, to_row,move_succesfull,checking_direction, checking_piece);
-                return ;
+                return make_move(b, from_col, from_row, to_col, to_row,move_succesfull,checking_direction, checking_piece);
+                
             }
             else if( b->board[to_i][to_j].color != player.color ){
                 *move_succesfull = 1;
-                take_piece(b, from_col, from_row, to_col, to_row,move_succesfull,checking_direction, checking_piece);
-                return ;
+                return take_piece(b, from_col, from_row, to_col, to_row,move_succesfull,checking_direction, checking_piece);
+                
             }
         }
         else{
             *move_succesfull = 0;
-            return ;
+            return -1;
         }
     }
     else if(b->board[from_i][from_j].type == 'b'){
         if( is_valid_bishop_move(b, from_i, from_j, to_i, to_j) ){
             if( b->board[to_i][to_j].type == '.' ){
                 *move_succesfull = 1;
-                make_move(b, from_col, from_row, to_col, to_row,move_succesfull,checking_direction, checking_piece);
-                return ;
+                return make_move(b, from_col, from_row, to_col, to_row,move_succesfull,checking_direction, checking_piece);
+                
             }
             else if( b->board[to_i][to_j].color != player.color ){
                 *move_succesfull = 1;
-                take_piece(b, from_col, from_row, to_col, to_row,move_succesfull,checking_direction, checking_piece);
-                return ;
+                return take_piece(b, from_col, from_row, to_col, to_row,move_succesfull,checking_direction, checking_piece);
+                
             }
         }
         else{
             *move_succesfull = 0;
-            return ;
+            return -1;
         }
     }
     else if(b->board[from_i][from_j].type == 'q'){
@@ -835,18 +840,18 @@ void validate_move(board_t *b, player_t player, char from_col, int from_row, cha
         ){
             if( b->board[to_i][to_j].type == '.' ){
                 *move_succesfull = 1;
-                make_move(b, from_col, from_row, to_col, to_row,move_succesfull,checking_direction, checking_piece);
-                return ;
+                return make_move(b, from_col, from_row, to_col, to_row,move_succesfull,checking_direction, checking_piece);
+                
             }
             else if( b->board[to_i][to_j].color != player.color ){
                 *move_succesfull = 1;
-                take_piece(b, from_col, from_row, to_col, to_row,move_succesfull,checking_direction, checking_piece);
-                return ;
+                return take_piece(b, from_col, from_row, to_col, to_row,move_succesfull,checking_direction, checking_piece);
+                
             }
         }
         else{
             *move_succesfull = 0;
-            return ;
+            return -1;
         }
     }
     else if(b->board[from_i][from_j].type == 'k'){
@@ -862,13 +867,13 @@ void validate_move(board_t *b, player_t player, char from_col, int from_row, cha
 
             if( b->board[to_i][to_j].type == '.' ){
                 *move_succesfull = 1;
-                make_move(b, from_col, from_row, to_col, to_row,move_succesfull,checking_direction, checking_piece);
-                return ;
+                return make_move(b, from_col, from_row, to_col, to_row,move_succesfull,checking_direction, checking_piece);
+                
             }
             else if( b->board[to_i][to_j].color != player.color ){
                 *move_succesfull = 1;
-                take_piece(b, from_col, from_row, to_col, to_row,move_succesfull,checking_direction, checking_piece);
-                return ;
+                return take_piece(b, from_col, from_row, to_col, to_row,move_succesfull,checking_direction, checking_piece);
+                
             }
         }
         else {
@@ -883,12 +888,12 @@ void validate_move(board_t *b, player_t player, char from_col, int from_row, cha
                             *move_succesfull = 1;
                             b->white.can_castle_short = 0;
                             b->white.can_castle_long = 0;
-                            return ;
+                            return 0;
                         }
                         else{
                             DBG printf("invalid move: this move would put you in check/ passes through a check\n");
                             *move_succesfull = 0;
-                            return ;
+                            return -1;
                         }
                     }
                 }
@@ -904,12 +909,12 @@ void validate_move(board_t *b, player_t player, char from_col, int from_row, cha
                             *move_succesfull = 1;
                             b->white.can_castle_short = 0;
                             b->white.can_castle_long = 0;
-                            return ;
+                            return 0;
                         }
                         else{
                             DBG printf("invalid move: this move would put you in check/ passes through a check\n");
                             *move_succesfull = 0;
-                            return ;
+                            return -1;
                         }
                     }
                 }
@@ -925,12 +930,12 @@ void validate_move(board_t *b, player_t player, char from_col, int from_row, cha
                             *move_succesfull = 1;
                             b->black.can_castle_short = 0;
                             b->black.can_castle_long = 0;
-                            return ;
+                            return 0;
                         }
                         else{
                             DBG printf("invalid move: this move would put you in check/ passes through a check\n");
                             *move_succesfull = 0;
-                            return ;
+                            return -1;
                         }
                     }
                 }
@@ -946,26 +951,27 @@ void validate_move(board_t *b, player_t player, char from_col, int from_row, cha
                             *move_succesfull = 1;
                             b->black.can_castle_short = 0;
                             b->black.can_castle_long = 0;
-                            return ;
+                            return 0;
                         }
                         else{
                             DBG printf("invalid move: this move would put you in check/ passes through a check\n");
                             *move_succesfull = 0;
-                            return ;
+                            return -1;
                         }
                     }
                 }
             }
             else{
                 *move_succesfull = 0;
-                return ;
+                return -1;
             }
         } 
     }
     else{
-        return ;
+        return -1;
     }
     *move_succesfull = 0;
+    return -1;
 }
 
 square_t get_king_position(board_t *b, int player_color){
@@ -1082,6 +1088,8 @@ int does_this_move_put_me_in_check(board_t *b, int player_color, int from_i, int
 }
 
 int check_for_checkmate(board_t *b, int player_color, char *checking_direction, square_t *checking_piece){
+
+    if( checking_piece->col == -1 && checking_piece->row == -1 ) return 0;
 
     int can_block = 0;
     int can_take = 0;
@@ -1238,32 +1246,28 @@ int chess_main(board_t *b, int turn, char input[]){ //return 0 for invalid move,
     char checking_direction;
     square_t checking_piece = {-1,-1};
 
+    int val = -1;
+
     if(sscanf(input, "%c%d%c%d", &from_col, &from_row, &to_col, &to_row) == 4){
  //       printf("%c%d%c%d\n",from_col, from_row, to_col, to_row);
         if( turn == 0 ){
-            validate_move(b, b->white, from_col, from_row, to_col, to_row,&move_succesfull,&checking_direction,&checking_piece);
+            val = validate_move(b, b->white, from_col, from_row, to_col, to_row,&move_succesfull,&checking_direction,&checking_piece);
             
             if(!move_succesfull)
                 return 0;
-            if(b->black.is_in_check == 1 && check_for_checkmate(b,1,&checking_direction, &checking_piece))
+            if(b->black.is_in_check == 1 && (check_for_checkmate(b,1,&checking_direction, &checking_piece) || val == 1) )
                 return 2;
         }
         else{
-            validate_move(b, b->black, from_col, from_row, to_col, to_row,&move_succesfull,&checking_direction,&checking_piece);
+            val = validate_move(b, b->black, from_col, from_row, to_col, to_row,&move_succesfull,&checking_direction,&checking_piece);
             
             if(!move_succesfull)
                 return 0;
 
-            if(b->white.is_in_check == 1 && check_for_checkmate(b,0,&checking_direction, &checking_piece))
+            if(b->white.is_in_check == 1 && (check_for_checkmate(b,0,&checking_direction, &checking_piece) || val == 1) )
                 return 3;
         }
         
-    }
-    else if( strcmp(input, "O-O\n") == 0 || strcmp(input, "o-o\n") == 0 ){
-        printf("short castle\n"); //needs change
-    }
-    else if( strcmp(input, "O-O-O\n") == 0 || strcmp(input, "o-o-o\n") == 0 ){
-        printf("long castle\n"); ////needs change
     }
     else{
         return 0;
