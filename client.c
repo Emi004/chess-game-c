@@ -1,5 +1,3 @@
-#define _POSIX_C_SOURCE 200809L
-
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -18,7 +16,7 @@
 
 int sockfd;
 
-void close_game(int sig){
+void close_game(){
 	endwin();
 	close(sockfd);
 	printf("You left the game\n");
@@ -27,7 +25,7 @@ void close_game(int sig){
 
 int main(){
 	setlocale(LC_ALL, "");
-	int first_turn = 1,invalid_move = 0;
+	int first_turn = 1,invalid_move = 0,you_lose=0,k=0;
 	struct sockaddr_in server; 
 	char username[50],buffer[BOARD_T_SIZE + 2];
 	char *end_of_username;
@@ -83,28 +81,36 @@ int main(){
 
 		if((turn == '1' || first_turn == 0) && invalid_move == 0){    //read opponent's move
 			bytes_read = read(sockfd,buffer,BOARD_AND_MOVE_BYTES);
-			if(strcmp(buffer,"Opponent has disconnected\n") == 0)
+			if(strcmp(buffer,"Opponent has disconnected\n") == 0 ||  bytes_read == 0)
 				break;
-			memcpy(&b,buffer+5,BOARD_BYTES);
+			else if(buffer[0] == 'l'){
+				you_lose = 1;
+				k = 1;
+			}
+			memcpy(&b,buffer+5+k,BOARD_BYTES);
 			if(strcmp(buffer,"4444") == 0){
 				render_board(b);
 			}
 			else{
-				move.from_x = buffer[0] - 97;
-				move.from_y = 56 - buffer[1];
-				move.to_x = buffer[2] - 97;
-				move.to_y = 56 - buffer[3];
+				move.from_x = buffer[0+k] - 97;
+				move.from_y = 56 - buffer[1+k];
+				move.to_x = buffer[2+k] - 97;
+				move.to_y = 56 - buffer[3+k];
 				move.move_made = 1;
 				ui_render_move(move,b,1);
 			}
-//			printf("first turn ove\n");
+			if(you_lose){
+				sprintf(buffer,"You lose.\n");
+				sleep(3);
+				break;
+			}
 		}
 		invalid_move = 0;
 		move.move_made = 0;
 		do{								//citeste mutarea
 			ch = getch();
 			if(ch == 27)
-				close_game(10);
+				close_game();
 			move = ui_return_move(b);
 		}while(move.move_made == 0);
 
@@ -113,15 +119,13 @@ int main(){
 		buffer[2] = move.to_x + 97;
 		buffer[3] = 56 - move.to_y;
 		buffer[4] = '\0';
-//		printf("%s\n",buffer);
 
 		write(sockfd,buffer,5);
 		bytes_read = read(sockfd,buffer,sizeof(buffer)-1);	
-//		buffer[bytes_read] = '\0';
 		if(bytes_read == BOARD_BYTES){
 			memcpy(&b,buffer,BOARD_BYTES);
 			ui_render_move(move,b,1);
-//			printf("Opponent's turn\n");
+
 		}
 		else if(bytes_read == BOARD_AND_MOVE_BYTES){
 			memcpy(&b,buffer+5,BOARD_BYTES);
@@ -129,7 +133,6 @@ int main(){
 		}
 		else if(strcmp(buffer,"Invalid move\n") == 0){
 			ui_render_move(move,b,0);
-//			printf("%s",buffer);
 			invalid_move = 1;
 			continue;
 		}

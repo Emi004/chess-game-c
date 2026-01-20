@@ -28,7 +28,7 @@ typedef struct{
 match_t matches[MAX_MATCHES];
 
 void close_game(int i, char color){
-	char buffer[30];
+	char buffer[BOARD_T_SIZE];
 	if(color == 'w'){
 		if(matches[i].turn == -1){
 			pthread_cond_signal(&(matches[i].cond));
@@ -46,8 +46,11 @@ void close_game(int i, char color){
 			write(matches[i].board.white.connfd,buffer,strlen(buffer) + 1);
 		}
 		else if(matches[i].turn == 3){
-			sprintf(buffer,"You lose.\n");
-			write(matches[i].board.white.connfd,buffer,strlen(buffer) + 1);
+			//sprintf(buffer,"You lose.\n");
+			buffer[0] = 'l';
+			strcpy(buffer+1,matches[i].last_move);
+			memcpy(buffer+6,&(matches[i].board),BOARD_BYTES);
+			write(matches[i].board.white.connfd,buffer,BOARD_AND_MOVE_BYTES+1);
 			pthread_mutex_destroy(&(matches[i].mutex));
 			pthread_cond_destroy(&(matches[i].cond));
 			matches[i].players = 0;
@@ -66,8 +69,11 @@ void close_game(int i, char color){
 			pthread_cond_signal(&(matches[i].cond));
 		}
 		else if(matches[i].turn == 2){
-			sprintf(buffer,"You lose.\n");
-			write(matches[i].board.black.connfd,buffer,strlen(buffer) + 1);
+			//sprintf(buffer,"You lose.\n");
+			buffer[0] = 'l';
+			strcpy(buffer+1,matches[i].last_move);
+			memcpy(buffer+6,&(matches[i].board),BOARD_BYTES);
+			write(matches[i].board.black.connfd,buffer,BOARD_AND_MOVE_BYTES+1);
 			pthread_mutex_destroy(&(matches[i].mutex));
 			pthread_cond_destroy(&(matches[i].cond));
 			matches[i].players = 0;
@@ -80,7 +86,6 @@ void close_game(int i, char color){
 		close(matches[i].board.black.connfd);		
 	}
 
-//	printf("Thread inchis cu succes\n");
 	pthread_exit(0);
 }
 
@@ -98,7 +103,8 @@ void *white_player_thread(void *arg){
 		pthread_mutex_lock(&(matches[i].mutex));
 		while(matches[i].turn == 1)
 			if(pthread_cond_wait(&(matches[i].cond),&(matches[i].mutex)) !=0){
-				printf("my fucking conditional variable\n");
+				perror("conditional variable");
+				exit(1);
 			}	
 		pthread_mutex_unlock(&(matches[i].mutex));
 		if(matches[i].turn != 0)
@@ -116,22 +122,17 @@ void *white_player_thread(void *arg){
 			close_game(i,'w');
 		}
 		
-//		printf("%ld %s\n",bytes_read,buffer);
 		while((return_value = chess_main(&(matches[i].board),0,buffer)) == 0){ //return 0 for invalid move, 1 for valid move, 2 for white checkmate, 3 for black chekmate, 4 for special move that needs the entire table to be re-rendered
 			sprintf(buffer,"Invalid move\n");
-			DBG printf("why are we here white twin\n");
-			fflush(stdout);
+
 			write(matches[i].board.white.connfd,buffer,35);
 			bytes_read = read(matches[i].board.white.connfd,buffer,sizeof(buffer)-1);
 			if (bytes_read == 0){
 				matches[i].turn = -1;
 				close_game(i,'w');
 			}
-			DBG printf("%d\n",return_value);
-			DBG fflush(stdout);
 		}
 		strcpy(matches[i].last_move,buffer);
-		DBG printf("%d\n", return_value);
 		fflush(stdout);
 		if(return_value == 2){
 			matches[i].turn = 2;
@@ -142,7 +143,6 @@ void *white_player_thread(void *arg){
 			close_game(i,'w');
 		}
 		else if(return_value == 4){
-			DBG printf("castiling\n");
 			special_move = 1;
 			memset(buffer,'4',4);
 			buffer[4] = '\0';
@@ -162,7 +162,7 @@ void *white_player_thread(void *arg){
 			special_move = 0;
 		}
 		
-		DBG print_board(&(matches[i].board)); //
+//		print_board(&(matches[i].board)); //
 	}
 	return NULL;
 }
@@ -182,7 +182,8 @@ void *black_player_thread(void *arg){
 		pthread_mutex_lock(&(matches[i].mutex));
 		while(matches[i].turn == 0)
 			if(pthread_cond_wait(&(matches[i].cond),&(matches[i].mutex)) !=0){
-				printf("my fucking conditional variable\n");
+				perror("conditional variable");
+				exit(1);
 			}	
 		pthread_mutex_unlock(&(matches[i].mutex));
 		
@@ -201,18 +202,13 @@ void *black_player_thread(void *arg){
 
 		while((return_value = chess_main(&(matches[i].board),1,buffer)) == 0){
 			sprintf(buffer,"Invalid move\n");
-			DBG printf("why are we here black twin\n");
-			DBG fflush(stdout);
 			write(matches[i].board.black.connfd,buffer,35);
 			bytes_read = read(matches[i].board.black.connfd,buffer,sizeof(buffer)-1);
 			if(bytes_read == 0){
 				matches[i].turn = -2;
 				close_game(i,'b');
 			}
-			DBG printf("%d %s\n",return_value,buffer);
-			DBG fflush(stdout);
 		}
-		DBG printf("%d\n",return_value);
 		strcpy(matches[i].last_move,buffer);
 		if(return_value == 3){
 			matches[i].turn = 3;
@@ -233,7 +229,6 @@ void *black_player_thread(void *arg){
 
 		matches[i].turn = 0;
 		pthread_cond_signal(&(matches[i].cond));
-		//sprintf(buffer,"Opponent's turn\n");
 		if(special_move == 0){
 			memcpy(buffer,&(matches[i].board),BOARD_BYTES);
 			write(matches[i].board.black.connfd,buffer,BOARD_BYTES);
@@ -241,7 +236,7 @@ void *black_player_thread(void *arg){
 		else{
 			special_move = 0;
 		}
-		DBG print_board(&(matches[i].board));
+//		print_board(&(matches[i].board));
 	}
 
 	return NULL;
@@ -319,7 +314,6 @@ int main(){
 				printf("server is full\n");
 				k = 0;
 				sleep(5);
-				//to do: do more idk
 			}
 		}
 		k = 0;
