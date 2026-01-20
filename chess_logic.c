@@ -391,9 +391,6 @@ int make_move(board_t *b, char from_col, int from_row, char to_col, int to_row,i
             *move_succesfull = 0;
             return -1;
         }
-        else {
-            b->white.is_in_check = 0;
-        }
         if( check_for_check(b, 1,checking_direction, checking_piece) ){
             DBG printf("black in check.\n");
             b->black.is_in_check = 1;
@@ -403,8 +400,12 @@ int make_move(board_t *b, char from_col, int from_row, char to_col, int to_row,i
 
             if(check_for_checkmate(b, 1 - color,checking_direction, checking_piece))return 1;
 
-            return 0;
+            //return 0;
         }
+        else {
+            b->white.is_in_check = 0;
+        }
+        return  0;
     }
     if(color == 1){
         if( check_for_check(b, 1,checking_direction, checking_piece) ){
@@ -413,9 +414,6 @@ int make_move(board_t *b, char from_col, int from_row, char to_col, int to_row,i
             b->board[from_i][from_j] = get_piece(color, ptype, from_i, from_j);
             *move_succesfull = 0;
             return -1;
-        }
-        else{
-            b->black.is_in_check = 0;
         }
         if( check_for_check(b, 0,checking_direction, checking_piece) ){
             DBG printf("white in check.\n");
@@ -426,8 +424,13 @@ int make_move(board_t *b, char from_col, int from_row, char to_col, int to_row,i
 
             if(check_for_checkmate(b, 1 - color,checking_direction, checking_piece)) return 1;
 
-            return 0;
+           
         }
+        else{
+            b->black.is_in_check = 0;
+        }
+        
+        return 0;
     }
     return 0;
 }
@@ -477,21 +480,24 @@ int take_piece(board_t *b, char from_col, int from_row, char to_col, int to_row,
             *move_succesfull = 0;
             return -1;
         }
+        if(  check_for_check(b, 1,checking_direction, checking_piece) ){
+            DBG printf("black in check.\n");
+            b->black.is_in_check = 1;
+            DBG printf("DEBUG: checking piece at %d,%d dir=%s\n",
+            checking_piece->row, checking_piece->col, checking_direction);
+            if( b->board[to_i][to_j].type == 'P' ) b->board[to_i][to_j].type = 'p';
+            if(check_for_checkmate(b, 1 - color,checking_direction, checking_piece)) return 1;
+            if (is_this_en_passant) return 4;
+            //return 0;
+        }
         else {
             b->white.is_in_check = 0;
             *move_succesfull = 1;
             if( b->board[to_i][to_j].type == 'P' ) b->board[to_i][to_j].type = 'p';
             if (is_this_en_passant) return 4;
-            return 0;
+            
         }
-        if(  check_for_check(b, 1,checking_direction, checking_piece) ){
-            DBG printf("black in check.\n");
-            b->black.is_in_check = 1;
-            if( b->board[to_i][to_j].type == 'P' ) b->board[to_i][to_j].type = 'p';
-            if(check_for_checkmate(b, 1 - color,checking_direction, checking_piece)) return 1;
-            if (is_this_en_passant) return 4;
-            return 0;
-        }
+        return 0;
     }
     if(color == 1){
         if( check_for_check(b, 1,checking_direction, checking_piece) ){
@@ -501,21 +507,24 @@ int take_piece(board_t *b, char from_col, int from_row, char to_col, int to_row,
             *move_succesfull = 0;
             return -1;
         }
+        if( check_for_check(b, 0,checking_direction, checking_piece) ){
+            DBG printf("white in check.\n");
+            b->white.is_in_check = 1;
+            DBG printf("DEBUG: checking piece at %d,%d dir=%s\n",
+            checking_piece->row, checking_piece->col, checking_direction);
+            if( b->board[to_i][to_j].type == 'P' ) b->board[to_i][to_j].type = 'p';
+            if(check_for_checkmate(b, 1 - color,checking_direction, checking_piece))return 1;
+            if (is_this_en_passant) return 4;
+            //return 0;
+        }
         else {
             b->black.is_in_check = 0;
             *move_succesfull = 1;
             if( b->board[to_i][to_j].type == 'P' ) b->board[to_i][to_j].type = 'p';
             if (is_this_en_passant) return 4;
-            return 0;
+            
         }
-        if( check_for_check(b, 0,checking_direction, checking_piece) ){
-            DBG printf("white in check.\n");
-            b->white.is_in_check = 1;
-            if( b->board[to_i][to_j].type == 'P' ) b->board[to_i][to_j].type = 'p';
-            if(check_for_checkmate(b, 1 - color,checking_direction, checking_piece))return 1;
-            if (is_this_en_passant) return 4;
-            return 0;
-        }
+        return 0;
     }
     DBG printf("take piece: literal impossible situation reached\n");
     DBG printf("take piece: from_i: %d from_j: %d color: %d type: %c\n", from_i, from_j, color, aptype);
@@ -541,9 +550,6 @@ int promote(board_t *b, int color, char from_col, int from_row, char to_col, int
             *move_succesfull = 0;
             return -1;
         }
-        else {
-            b->white.is_in_check = 0;
-        }
         if( check_for_check(b, 1,checking_direction, checking_piece) ){
             DBG printf("black in check.\n");
             b->black.is_in_check = 1;
@@ -552,6 +558,10 @@ int promote(board_t *b, int color, char from_col, int from_row, char to_col, int
 
             return 0;
         }
+        else {
+            b->white.is_in_check = 0;
+        }
+        return 0;
     }
     if(color == 1){
         if( check_for_check(b, 1,checking_direction, checking_piece) ){
@@ -561,9 +571,6 @@ int promote(board_t *b, int color, char from_col, int from_row, char to_col, int
             *move_succesfull = 0;
             return -1;
         }
-        else {
-            b->black.is_in_check = 0;
-        }
         if( check_for_check(b, 0,checking_direction, checking_piece) ){
             DBG printf("white in check.\n");
             b->white.is_in_check = 1;
@@ -572,6 +579,10 @@ int promote(board_t *b, int color, char from_col, int from_row, char to_col, int
 
             return 0;
         }
+        else {
+            b->black.is_in_check = 0;
+        }
+        return 0;
     }
     DBG printf("literal impossible situation reached\n");
     return -1;
@@ -1304,11 +1315,13 @@ int chess_main(board_t *b, int turn, char input[]){ //return 0 for invalid move,
  //       printf("%c%d%c%d\n",from_col, from_row, to_col, to_row);
         if( turn == 0 ){
             val = validate_move(b, b->white, from_col, from_row, to_col, to_row,&move_succesfull,&checking_direction,&checking_piece);
-            
+            DBG printf("value in chess main: %d\n", val);
             if(!move_succesfull)
                 return 0;
-            if(b->black.is_in_check == 1 && (check_for_checkmate(b,1,&checking_direction, &checking_piece) || val == 1) )
+            if(  check_for_checkmate(b,1,&checking_direction, &checking_piece) == 1 || val == 1){
+                DBG printf("im checking my shit\n");
                 return 2;
+            }
         }
         else{
             val = validate_move(b, b->black, from_col, from_row, to_col, to_row,&move_succesfull,&checking_direction,&checking_piece);
@@ -1316,8 +1329,10 @@ int chess_main(board_t *b, int turn, char input[]){ //return 0 for invalid move,
             if(!move_succesfull)
                 return 0;
 
-            if(b->white.is_in_check == 1 && (check_for_checkmate(b,0,&checking_direction, &checking_piece) || val == 1) )
+            if( check_for_checkmate(b,0,&checking_direction, &checking_piece) || val == 1 ){
+                DBG printf("im checking my shit\n");
                 return 3;
+            }
         }
         
     }
@@ -1338,6 +1353,7 @@ int chess_main(board_t *b, int turn, char input[]){ //return 0 for invalid move,
         return 4;
     }
 
+    
     return 1;
 
 }

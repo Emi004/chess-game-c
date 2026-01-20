@@ -1,3 +1,5 @@
+#define _POSIX_C_SOURCE 200809L
+
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -16,7 +18,7 @@
 
 int sockfd;
 
-void close_game(){
+void close_game(int sig){
 	endwin();
 	close(sockfd);
 	printf("You left the game\n");
@@ -102,7 +104,7 @@ int main(){
 		do{								//citeste mutarea
 			ch = getch();
 			if(ch == 27)
-				close_game();
+				close_game(10);
 			move = ui_return_move(b);
 		}while(move.move_made == 0);
 

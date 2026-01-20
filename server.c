@@ -119,7 +119,7 @@ void *white_player_thread(void *arg){
 //		printf("%ld %s\n",bytes_read,buffer);
 		while((return_value = chess_main(&(matches[i].board),0,buffer)) == 0){ //return 0 for invalid move, 1 for valid move, 2 for white checkmate, 3 for black chekmate, 4 for special move that needs the entire table to be re-rendered
 			sprintf(buffer,"Invalid move\n");
-//			printf("why are we here white twin\n");
+			DBG printf("why are we here white twin\n");
 			fflush(stdout);
 			write(matches[i].board.white.connfd,buffer,35);
 			bytes_read = read(matches[i].board.white.connfd,buffer,sizeof(buffer)-1);
@@ -127,11 +127,11 @@ void *white_player_thread(void *arg){
 				matches[i].turn = -1;
 				close_game(i,'w');
 			}
-//			printf("%d\n",return_value);
-//			fflush(stdout);
+			DBG printf("%d\n",return_value);
+			DBG fflush(stdout);
 		}
 		strcpy(matches[i].last_move,buffer);
-//		printf("%d\n", return_value);
+		DBG printf("%d\n", return_value);
 		fflush(stdout);
 		if(return_value == 2){
 			matches[i].turn = 2;
@@ -142,7 +142,7 @@ void *white_player_thread(void *arg){
 			close_game(i,'w');
 		}
 		else if(return_value == 4){
-//			printf("castiling\n");
+			DBG printf("castiling\n");
 			special_move = 1;
 			memset(buffer,'4',4);
 			buffer[4] = '\0';
@@ -162,7 +162,7 @@ void *white_player_thread(void *arg){
 			special_move = 0;
 		}
 		
-//		print_board(&(matches[i].board)); //
+		DBG print_board(&(matches[i].board)); //
 	}
 	return NULL;
 }
@@ -201,18 +201,18 @@ void *black_player_thread(void *arg){
 
 		while((return_value = chess_main(&(matches[i].board),1,buffer)) == 0){
 			sprintf(buffer,"Invalid move\n");
-//			printf("why are we here black twin\n");
-//			fflush(stdout);
+			DBG printf("why are we here black twin\n");
+			DBG fflush(stdout);
 			write(matches[i].board.black.connfd,buffer,35);
 			bytes_read = read(matches[i].board.black.connfd,buffer,sizeof(buffer)-1);
 			if(bytes_read == 0){
 				matches[i].turn = -2;
 				close_game(i,'b');
 			}
-//			printf("%d %s\n",return_value,buffer);
-//			fflush(stdout);
+			DBG printf("%d %s\n",return_value,buffer);
+			DBG fflush(stdout);
 		}
-//		printf("%d\n",return_value);
+		DBG printf("%d\n",return_value);
 		strcpy(matches[i].last_move,buffer);
 		if(return_value == 3){
 			matches[i].turn = 3;
@@ -241,7 +241,7 @@ void *black_player_thread(void *arg){
 		else{
 			special_move = 0;
 		}
-//		print_board(&(matches[i].board));
+		DBG print_board(&(matches[i].board));
 	}
 
 	return NULL;
