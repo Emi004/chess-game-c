@@ -4,37 +4,63 @@
 #include <locale.h>
 #include <string.h>
 #include <unistd.h>
-#include "ui.h"
 
-WINDOW *win;
+
+#include "old_ui.h"
+//#include "chess_logic.h"
+
+int move_succesfull;
+
+piece_t get_piece(int color, char type, int row, int col){
+    piece_t p;
+    p.color = color; // 0 = white, 1 = black, -1 = empty
+    p.type  = type; // . = empty
+    p.row   = row;
+    p.col   = col;
+    return p;
+}
+
+board_t init_board(board_t b, player_t white, player_t black){
+    b.white = white;
+    b.black = black;
+    for(int i = 2; i < 6; i++){
+        for(int j = 0; j < BOARD_SIZE; j++){
+            b.board[i][j] = get_piece(-1, '.', i, j);
+        }
+    }
+    for(int i = 0; i < BOARD_SIZE; i++){
+        b.board[1][i] = get_piece(1, 'p', 1, i);
+        b.board[6][i] = get_piece(0, 'p', 6, i);
+    }
+    char pieces[8] = {'r', 'n', 'b', 'q', 'k', 'b', 'n', 'r'};
+     for(int i = 0; i < BOARD_SIZE; i++){
+        b.board[0][i] = get_piece(1, pieces[i], 0, i);
+        b.board[7][i] = get_piece(0,pieces[i],7,i);
+    }
+    return b;
+}
 
 const char *map_to_unicode(char piece, int color) {
     static char buf[16] = {0};
 
     switch (piece) {
         case 'p':
-            strcpy(buf, color ? "\u265F" : "\u2659"); //  \u265F   \u2659  ♟ : ♙
-            break;
-        case 'P':
-            strcpy(buf, color ? "\u265F" : "\u2659"); //  \u265F   \u2659  ♟ : ♙
+            strcpy(buf, color ? "\u265F" : "\u2659"); // ♟ : ♙
             break;
         case 'k':
-            strcpy(buf, color ? "\u265A" : "\u2654"); // \u265A   \u2654     ♚ : ♔
+            strcpy(buf, color ? "\u265A" : "\u2654"); // ♚ : ♔
             break;
         case 'n':
-            strcpy(buf, color ? "\u265E" : "\u2658"); // \u265E  \u2658      ♞ : ♘
+            strcpy(buf, color ? "\u265E" : "\u2658"); // ♞ : ♘
             break;
         case 'b':
-            strcpy(buf, color ? "\u265D" : "\u2657"); //  \u265D  \u2657 ♝ : ♗
+            strcpy(buf, color ? "\u265D" : "\u2657"); // ♝ : ♗
             break;
         case 'q':
-            strcpy(buf, color ? "\u265B" : "\u2655"); // \u265B  \u2655 ♛ : ♕
+            strcpy(buf, color ? "\u265B" : "\u2655"); // ♛ : ♕
             break;
         case 'r':
-            strcpy(buf, color ? "\u265C" : "\u2656"); // \u265C   \u2656 ♜ : ♖
-            break;
-        case '.':
-            strcpy(buf, color ? "\u265F" : "\u2659"); //  \u265F   \u2659  ♟ : ♙
+            strcpy(buf, color ? "\u265C" : "\u2656"); // ♜ : ♖
             break;
         default:
             strcpy(buf, "?");
@@ -46,7 +72,7 @@ const char *map_to_unicode(char piece, int color) {
 
 void init_colors() {
     init_color(COLOR_BROWN, 585, 300, 132);
-    init_color(COLOR_BEJ, 300, 300, 300);
+    init_color(COLOR_BEJ, 929, 859, 589);
     init_color(COLOR_GREY, 500, 500, 500);
     //black pieces
     init_pair(COLOR_PAIR_BLACK_LIGHT, COLOR_GREY, COLOR_BEJ);
@@ -72,7 +98,8 @@ void init_colors() {
     init_pair(COLOR_PAIR_HIGHLIGHT_RED_WHITE, COLOR_WHITE, COLOR_RED);
 }
 
-void draw_square(int row, int col, board_t board, int color_pair, int foreground_color_w, int foreground_color_b) {
+void draw_square(WINDOW *win, int row, int col, board_t *board, int color_pair, int foreground_color_w,
+                 int foreground_color_b) {
     int win_width, win_height;
     getmaxyx(win, win_height, win_width);
     int board_start_x = (win_width - TABLE_WIDTH) / 2;
@@ -84,8 +111,8 @@ void draw_square(int row, int col, board_t board, int color_pair, int foreground
         mvwhline(win, y + i, x, ' ', SQUARE_WIDTH);
     }
     wattroff(win, COLOR_PAIR(color_pair));
-    if (board.board[row][col].color != -1) {
-        switch (board.board[row][col].color) {
+    if (board->board[row][col].color != -1) {
+        switch (board->board[row][col].color) {
             case 0:
                 wattron(win, COLOR_PAIR(foreground_color_w)|A_BOLD);
                 break;
@@ -93,14 +120,14 @@ void draw_square(int row, int col, board_t board, int color_pair, int foreground
                 wattron(win, COLOR_PAIR(foreground_color_b)|A_BOLD);
                 break;
         }
-        const char *uni = map_to_unicode(board.board[row][col].type, board.board[row][col].color);
+        const char *uni = map_to_unicode(board->board[row][col].type, board->board[row][col].color);
         mvwaddstr(win, y+LABEL_OFFSET_Y, x+LABEL_OFFSET_X, uni);
         wattroff(win, COLOR_PAIR(foreground_color_w)|COLOR_PAIR(foreground_color_b)| A_BOLD);
     }
     wrefresh(win);
 }
 
-void render_board(board_t board) {
+void render_board(WINDOW *win, board_t board) {
     int win_width, win_height;
     getmaxyx(win, win_height, win_width);
     int board_start_x = (win_width - TABLE_WIDTH) / 2;
@@ -165,7 +192,7 @@ void render_board(board_t board) {
     wrefresh(win);
 }
 
-MOVE_T ui_return_move(board_t board) {
+MOVE_T ui_return_move(int ch, WINDOW *win, board_t *board) {
     static int toggle_to_move_square = 0;
     static int from_x, from_y;
 
@@ -182,22 +209,23 @@ MOVE_T ui_return_move(board_t board) {
     int board_end_x = board_start_x + TABLE_WIDTH;
     int board_end_y = board_start_y + TABLE_HEIGHT;
 
-    if (getmouse(&event) == OK && (event.bstate & BUTTON1_PRESSED)) {
+    if (ch == KEY_MOUSE && getmouse(&event) == OK && (event.bstate & BUTTON1_PRESSED)) {
         if (event.x >= board_start_x && event.x < board_end_x && event.y >= board_start_y && event.y < board_end_y) {
             int col = (event.x - board_start_x) / SQUARE_WIDTH;
             int row = (event.y - board_start_y) / SQUARE_HEIGHT;
             
             if (toggle_to_move_square == 0) {
-                
-                if (board.board[row][col].color != -1) {
+                printf("aici odata\n");
+                if (board->board[row][col].color != -1) {
                     from_x = col;
                     from_y = row;
-                    draw_square(row, col, board,
+                    draw_square(win, row, col, board,
                                 COLOR_PAIR_HIGHLIGHT, COLOR_PAIR_HIGHLIGHT_WHITE,
                                 COLOR_PAIR_HIGHLIGHT_BLACK);
                     toggle_to_move_square = 1;
                 }
             } else {
+                printf("si aici altadata\n");
                 move.from_x = from_x;
                 move.from_y = from_y;
                 move.to_x = col;
@@ -211,21 +239,21 @@ MOVE_T ui_return_move(board_t board) {
     return move;
 }
 
-void ui_render_move(MOVE_T move, board_t board, int move_succesfull) {
- //   if (move.move_made) {
+void ui_render_move(MOVE_T move, WINDOW *win, board_t *board) {
+    if (move.move_made) {
         int from_x = move.from_x;
         int from_y = move.from_y;
         int to_x = move.to_x;
         int to_y = move.to_y;
 
         if (move_succesfull == 0) {
-            draw_square(to_y, to_x, board,
+            draw_square(win, to_y, to_x, board,
                         COLOR_PAIR_HIGHLIGHT_RED, COLOR_PAIR_HIGHLIGHT_RED_WHITE,
                         COLOR_PAIR_HIGHLIGHT_RED_BLACK);
             sleep(1);
         }
 
-        draw_square(to_y, to_x, board,
+        draw_square(win, to_y, to_x, board,
                     (to_x + to_y) % 2 == 0
                         ? COLOR_PAIR_LIGHT
                         : COLOR_PAIR_DARK,
@@ -235,7 +263,7 @@ void ui_render_move(MOVE_T move, board_t board, int move_succesfull) {
                     (to_x + to_y) % 2 == 0
                         ? COLOR_PAIR_BLACK_LIGHT
                         : COLOR_PAIR_BLACK_DARK);
-        draw_square(from_y, from_x, board,
+        draw_square(win, from_y, from_x, board,
                     (from_x + from_y) % 2 == 0
                         ? COLOR_PAIR_LIGHT
                         : COLOR_PAIR_DARK,
@@ -245,26 +273,18 @@ void ui_render_move(MOVE_T move, board_t board, int move_succesfull) {
                     (from_x + from_y) % 2 == 0
                         ? COLOR_PAIR_BLACK_LIGHT
                         : COLOR_PAIR_BLACK_DARK);
-//    }
+    }
     wrefresh(win);
 }
-void render_turn(int turn){
-    char turn_label[64];
-    int term_rows = LINES;
-    int term_cols = COLS;
 
-    snprintf(turn_label, sizeof(turn_label), "%s to move", turn ? "Black":"White");
-    int win_height = term_rows * WINDOW_SIZE;
-    int win_width = term_cols * WINDOW_SIZE;
-    int starty = (term_rows - win_height) / 2;
-    int startx = (term_cols - win_width) / 2;
-    
-    move(starty - 1,startx + (win_width - strlen(turn_label)) / 2);
-    printw(turn_label);
-    refresh();
-}
+int main(void) {
+    int ch;
 
-void init_ui(board_t board, char* player_color,char *opponent_name) {
+    board_t board;
+    player_t white = {1, 1, 0, 0};
+    player_t black = {1, 1, 1, 0};
+    board = init_board(board, white, black);
+    board.board[3][1] = (piece_t){0, 'k', 1, 3};
     setlocale(LC_ALL, "");
     initscr();
     cbreak();
@@ -280,7 +300,7 @@ void init_ui(board_t board, char* player_color,char *opponent_name) {
         printf("Terminal too small! Minimum size required: %d rows x %d cols\n",
                MIN_ROWS, MIN_COLS);
         printf("Current size: %d rows x %d cols\n", term_rows, term_cols);
-        return ;
+        return 1;
     }
 
     mousemask(ALL_MOUSE_EVENTS, NULL);
@@ -291,9 +311,8 @@ void init_ui(board_t board, char* player_color,char *opponent_name) {
         init_colors();
     }
 
-    char color_label[64];
-    snprintf(color_label, sizeof(color_label), "You are playing as %s against %s", player_color,opponent_name);
-
+    printw("Press ESC to exit");
+    refresh();
 
     int win_height = term_rows * WINDOW_SIZE;
     int win_width = term_cols * WINDOW_SIZE;
@@ -306,14 +325,23 @@ void init_ui(board_t board, char* player_color,char *opponent_name) {
     int starty = (term_rows - win_height) / 2;
     int startx = (term_cols - win_width) / 2;
 
+    // move(1,0);
+    // printw("%d %d",startx,starty);
 
-    move(starty - 2, startx + (win_width - strlen(color_label)) / 2);
-    printw(color_label);
-    refresh();
-    win = newwin(win_height, win_width, starty, startx);
-    box(win, 0, 0);
-    wrefresh(win);
+    WINDOW *square = newwin(win_height, win_width, starty, startx);
+    box(square, 0, 0);
+    wrefresh(square);
     set_escdelay(0);
+    render_board(square, board);
+    while ((ch = getch()) != 27) {
 
-    render_board(board);
+        MOVE_T move=ui_return_move(ch, square, &board);
+        if (move.move_made) {
+            move_succesfull = rand()%2;
+            // printf("Move made from (%d, %d) to (%d, %d) move succesfull (%d)\n", move.from_x, move.from_y, move.to_x, move.to_y, move_succesfull);
+            ui_render_move(move, square, &board);
+        }
+    }
+    endwin();
+    return 0;
 }
