@@ -34,7 +34,7 @@ const char *map_to_unicode(char piece, int color) {
             strcpy(buf, color ? "\u265C" : "\u2656"); // \u265C   \u2656 ♜ : ♖
             break;
         case '.':
-            strcpy(buf, color ? "" : ""); //  \u265F   \u2659  ♟ : ♙
+            strcpy(buf, color ? "\u265F" : "\u2659"); //  \u265F   \u2659  ♟ : ♙
             break;
         default:
             strcpy(buf, "?");
@@ -182,13 +182,6 @@ MOVE_T ui_return_move(board_t board) {
     int board_end_x = board_start_x + TABLE_WIDTH;
     int board_end_y = board_start_y + TABLE_HEIGHT;
 
-//    if(ch == KEY_MOUSE)
-//        printf("1\n");
-//    if(getmouse(&event) == OK)
-//        printf("2\n");
-//    if(event.bstate & BUTTON1_PRESSED)
-//        printf("3\n");
-
     if (getmouse(&event) == OK && (event.bstate & BUTTON1_PRESSED)) {
         if (event.x >= board_start_x && event.x < board_end_x && event.y >= board_start_y && event.y < board_end_y) {
             int col = (event.x - board_start_x) / SQUARE_WIDTH;
@@ -255,8 +248,23 @@ void ui_render_move(MOVE_T move, board_t board, int move_succesfull) {
 //    }
     wrefresh(win);
 }
+void render_turn(int turn){
+    char turn_label[64];
+    int term_rows = LINES;
+    int term_cols = COLS;
 
-void init_ui(board_t board, char* player_color) {
+    snprintf(turn_label, sizeof(turn_label), "%s to move", turn ? "Black":"White");
+    int win_height = term_rows * WINDOW_SIZE;
+    int win_width = term_cols * WINDOW_SIZE;
+    int starty = (term_rows - win_height) / 2;
+    int startx = (term_cols - win_width) / 2;
+    
+    move(starty - 1,startx + (win_width - strlen(turn_label)) / 2);
+    printw(turn_label);
+    refresh();
+}
+
+void init_ui(board_t board, char* player_color,char *opponent_name) {
     setlocale(LC_ALL, "");
     initscr();
     cbreak();
@@ -284,7 +292,7 @@ void init_ui(board_t board, char* player_color) {
     }
 
     char color_label[64];
-    snprintf(color_label, sizeof(color_label), "You are playing as %s", player_color);
+    snprintf(color_label, sizeof(color_label), "You are playing as %s against %s", player_color,opponent_name);
 
 
     int win_height = term_rows * WINDOW_SIZE;
@@ -299,7 +307,7 @@ void init_ui(board_t board, char* player_color) {
     int startx = (term_cols - win_width) / 2;
 
 
-    move(starty - 1, startx + (win_width - strlen(color_label)) / 2);
+    move(starty - 2, startx + (win_width - strlen(color_label)) / 2);
     printw(color_label);
     refresh();
     win = newwin(win_height, win_width, starty, startx);

@@ -289,7 +289,7 @@ int main(){
 	memset(&server_bind, 0, sizeof(server_bind)); 
 	server_bind.sin_family = AF_INET; 
 	server_bind.sin_addr.s_addr = INADDR_ANY; 
-	server_bind.sin_port = htons(4555); 
+	server_bind.sin_port = htons(4556); 
 	if (bind(sockfd, (struct sockaddr *)&server_bind, sizeof(server_bind)) < 0) {
 		perror("bind");
 		exit(1);

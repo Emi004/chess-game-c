@@ -51,7 +51,7 @@ int main(){
 	memset(&server, 0, sizeof(server)); 
 	server.sin_family = AF_INET;		
 	server.sin_addr.s_addr = inet_addr("127.0.0.1");
-	server.sin_port = htons(4555); 
+	server.sin_port = htons(4556); 
 	
 	printf("Type your username: ");
 	fgets(username,49,stdin);
@@ -69,16 +69,15 @@ int main(){
 	turn = buffer[0];
 	end_of_username = strchr(buffer,'\n');
 	*end_of_username = '\0';
-	printf("Congrats you are playing chess against %s\n",buffer+1);
+//	printf("Congrats you are playing chess against %s\n",buffer+1);
 	memcpy(&b,end_of_username+1,BOARD_BYTES);
 	if(turn == '0')
-		init_ui(b,"white");
+		init_ui(b,"white",buffer+1);
 	else
-		init_ui(b,"black");
+		init_ui(b,"black",buffer+1);
+	render_turn(0);
 
-
-	while(1){
-
+	while(1){		
 		if((turn == '1' || first_turn == 0) && invalid_move == 0){    //read opponent's move
 			bytes_read = read(sockfd,buffer,BOARD_AND_MOVE_BYTES);
 			if(strcmp(buffer,"Opponent has disconnected\n") == 0 ||  bytes_read == 0)
@@ -105,6 +104,11 @@ int main(){
 				break;
 			}
 		}
+		if(turn == '0')
+			render_turn(0);
+		else
+			render_turn(1);
+
 		invalid_move = 0;
 		move.move_made = 0;
 		do{								//citeste mutarea
@@ -139,7 +143,12 @@ int main(){
 		else if(strcmp(buffer,"You win!\n") == 0 || strcmp(buffer,"You lose.\n") == 0 || strcmp(buffer,"Opponent has disconnected\n") == 0 ||  bytes_read == 0){
 			break;
 		}
+		if(turn == '0')
+			render_turn(1);
+		else
+			render_turn(0);
 		first_turn = 0;
+		
 	}
 
 	endwin();

@@ -97,6 +97,8 @@ MOVE_T ui_return_move(board_t board);
  */
 void ui_render_move(MOVE_T move, board_t board, int move_succesfull);
 
-void init_ui(board_t b, char* player_color);
+void init_ui(board_t b, char* player_color, char* opponent_name);
+
+void render_turn(int turn);
 
 #endif // CHESS_UI_H
