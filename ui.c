@@ -13,25 +13,25 @@ const char *map_to_unicode(char piece, int color) {
 
     switch (piece) {
         case 'p':
-            strcpy(buf, color ? "\u265F" : "\u2659"); //  \u265F   \u2659  ♟ : ♙
+            strcpy(buf, color ? "p" : "p"); //  \u265F   \u2659  ♟ : ♙
             break;
         case 'P':
-            strcpy(buf, color ? "\u265F" : "\u2659"); //  \u265F   \u2659  ♟ : ♙
+            strcpy(buf, color ? "P" : "P"); //  \u265F   \u2659  ♟ : ♙
             break;
         case 'k':
-            strcpy(buf, color ? "\u265A" : "\u2654"); // \u265A   \u2654     ♚ : ♔
+            strcpy(buf, color ? "k" : "k"); // \u265A   \u2654     ♚ : ♔
             break;
         case 'n':
-            strcpy(buf, color ? "\u265E" : "\u2658"); // \u265E  \u2658      ♞ : ♘
+            strcpy(buf, color ? "n" : "n"); // \u265E  \u2658      ♞ : ♘
             break;
         case 'b':
-            strcpy(buf, color ? "\u265D" : "\u2657"); //  \u265D  \u2657 ♝ : ♗
+            strcpy(buf, color ? "b" : "b"); //  \u265D  \u2657 ♝ : ♗
             break;
         case 'q':
-            strcpy(buf, color ? "\u265B" : "\u2655"); // \u265B  \u2655 ♛ : ♕
+            strcpy(buf, color ? "q" : "q"); // \u265B  \u2655 ♛ : ♕
             break;
         case 'r':
-            strcpy(buf, color ? "\u265C" : "\u2656"); // \u265C   \u2656 ♜ : ♖
+            strcpy(buf, color ? "r" : "r"); // \u265C   \u2656 ♜ : ♖
             break;
         case '.':
             strcpy(buf, color ? "" : ""); //  \u265F   \u2659  ♟ : ♙
